@@ -1227,6 +1227,16 @@ function PolicyListPage() {
             </div>
             <span style={policyStyles.arrow}>→</span>
           </a>
+
+          <a href="/politicas/seguranca-infantil-churchapp" style={policyStyles.linkCard}>
+            <div>
+              <strong style={policyStyles.linkTitle}>Segurança Infantil — ChurchApp</strong>
+              <p style={policyStyles.linkDescription}>
+                Normas públicas de segurança infantil e combate ao abuso e exploração sexual infantil.
+              </p>
+            </div>
+            <span style={policyStyles.arrow}>→</span>
+          </a>
         </div>
       </section>
     </main>
@@ -1548,6 +1558,223 @@ function DeleteAccountChurchAppPage() {
     </main>
   );
 }
+function NormasSegurancaInfantilChurchAppPage() {
+  const contactEmail = PLATFORM.supportEmail || "suporte@mbtech.com.br";
+
+  return (
+    <main style={policyStyles.page}>
+      <style>{css}</style>
+
+      <article style={policyStyles.document}>
+        <header style={policyStyles.header}>
+          <div style={policyStyles.badge}>ChurchApp</div>
+
+          <h1 style={policyStyles.title}>Normas de Segurança Infantil</h1>
+
+          <p style={policyStyles.updated}>
+            Última atualização: 24 de maio de 2026
+          </p>
+        </header>
+
+        <section style={policyStyles.section}>
+          <p style={policyStyles.description}>
+            O ChurchApp é um aplicativo voltado à organização, comunicação e
+            gestão de comunidades religiosas. A proteção de crianças e
+            adolescentes é tratada como prioridade. Esta página apresenta nossas
+            normas públicas de segurança infantil e de combate ao abuso e à
+            exploração sexual infantil.
+          </p>
+
+          <p style={policyStyles.description}>
+            O ChurchApp não permite qualquer conteúdo, conduta, comunicação,
+            imagem, texto, arquivo, perfil ou atividade que promova, facilite,
+            normalize, incentive ou represente abuso, exploração, aliciamento,
+            sexualização ou qualquer forma de dano contra crianças ou
+            adolescentes.
+          </p>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>
+            1. Proibição de conteúdo de abuso e exploração sexual infantil
+          </h2>
+
+          <p style={policyStyles.description}>
+            É estritamente proibido no ChurchApp:
+          </p>
+
+          <ul style={{ ...policyStyles.description, paddingLeft: 22 }}>
+            <li>
+              Publicar, enviar, armazenar, solicitar ou compartilhar qualquer
+              conteúdo de abuso sexual infantil, exploração sexual infantil ou
+              material relacionado.
+            </li>
+            <li>
+              Usar o aplicativo para aliciar, assediar, manipular, coagir ou
+              explorar crianças ou adolescentes.
+            </li>
+            <li>
+              Criar perfis, mensagens, eventos, avisos, imagens ou qualquer
+              conteúdo que sexualize menores de idade.
+            </li>
+            <li>
+              Incentivar, organizar, facilitar ou encobrir qualquer prática
+              relacionada a abuso, exploração, tráfico, exposição indevida ou
+              risco contra menores.
+            </li>
+          </ul>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>2. Medidas adotadas pelo ChurchApp</h2>
+
+          <p style={policyStyles.description}>
+            Para apoiar um ambiente mais seguro, o ChurchApp pode adotar medidas
+            como:
+          </p>
+
+          <ul style={{ ...policyStyles.description, paddingLeft: 22 }}>
+            <li>
+              Remoção de conteúdo inadequado, abusivo, ilegal ou que viole estas
+              normas.
+            </li>
+            <li>
+              Suspensão ou bloqueio de contas envolvidas em violações.
+            </li>
+            <li>
+              Restrição de acesso a funcionalidades administrativas quando
+              houver uso indevido.
+            </li>
+            <li>
+              Análise de denúncias recebidas por usuários, responsáveis,
+              administradores de igrejas ou autoridades competentes.
+            </li>
+            <li>
+              Cooperação com autoridades competentes quando houver obrigação
+              legal, risco à segurança ou indício de prática criminosa.
+            </li>
+          </ul>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>3. Denúncia de violações</h2>
+
+          <p style={policyStyles.description}>
+            Qualquer usuário, responsável, membro, administrador de igreja ou
+            terceiro que identifique conteúdo ou comportamento suspeito
+            envolvendo criança ou adolescente deve comunicar imediatamente a
+            equipe responsável pelo ChurchApp.
+          </p>
+
+          <p style={policyStyles.description}>
+            Canal de contato para denúncias e solicitações relacionadas à
+            segurança infantil:
+          </p>
+
+          <p style={policyStyles.contact}>{contactEmail}</p>
+
+          <p style={policyStyles.description}>
+            Assunto sugerido:{" "}
+            <strong>Denúncia de segurança infantil — ChurchApp</strong>
+          </p>
+
+          <p
+            style={{
+              ...policyStyles.description,
+              padding: 14,
+              borderRadius: 14,
+              background: "#fffbeb",
+              borderLeft: "4px solid #d97706",
+            }}
+          >
+            Em situações de emergência, risco imediato ou suspeita de crime,
+            procure imediatamente as autoridades competentes da sua região.
+          </p>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>4. Informações úteis para denúncia</h2>
+
+          <p style={policyStyles.description}>
+            Ao enviar uma denúncia, informe, sempre que possível:
+          </p>
+
+          <ul style={{ ...policyStyles.description, paddingLeft: 22 }}>
+            <li>Nome ou identificação do perfil envolvido;</li>
+            <li>Igreja ou comunidade vinculada, se houver;</li>
+            <li>Descrição objetiva do ocorrido;</li>
+            <li>Data, horário aproximado e local dentro do app;</li>
+            <li>Prints, links, nomes de telas ou outras evidências disponíveis.</li>
+          </ul>
+
+          <p style={policyStyles.description}>
+            As denúncias serão analisadas com prioridade e tratadas com o
+            cuidado necessário para proteger possíveis vítimas e preservar
+            informações relevantes.
+          </p>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>
+            5. Responsabilidades de administradores e igrejas
+          </h2>
+
+          <p style={policyStyles.description}>
+            Igrejas, líderes e administradores que utilizam o ChurchApp devem
+            zelar pelo uso adequado da plataforma, orientar membros autorizados,
+            revisar conteúdos cadastrados e agir prontamente diante de qualquer
+            suspeita de risco, abuso, exposição indevida ou violação destas
+            normas.
+          </p>
+
+          <p style={policyStyles.description}>
+            O uso de funcionalidades como cadastro de membros, células, eventos,
+            ministérios, imagens e avisos deve respeitar a privacidade, a
+            dignidade e a segurança de crianças e adolescentes.
+          </p>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>6. Tratamento de dados de menores</h2>
+
+          <p style={policyStyles.description}>
+            O ChurchApp pode conter informações de membros de diferentes idades,
+            inclusive crianças e adolescentes, quando cadastradas por uma igreja,
+            responsável ou usuário autorizado.
+          </p>
+
+          <p style={policyStyles.description}>
+            Dados de menores devem ser cadastrados e utilizados apenas quando
+            necessários para as finalidades legítimas do aplicativo, observando a
+            legislação aplicável, a proteção integral e o melhor interesse da
+            criança e do adolescente.
+          </p>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>7. Atualizações destas normas</h2>
+
+          <p style={policyStyles.description}>
+            Estas normas poderão ser atualizadas periodicamente para refletir
+            melhorias de segurança, mudanças legais, orientações de plataformas
+            de distribuição ou aperfeiçoamentos operacionais do ChurchApp.
+          </p>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>8. Contato</h2>
+
+          <p style={policyStyles.description}>
+            Em caso de dúvidas sobre estas normas, entre em contato pelo e-mail:
+          </p>
+
+          <p style={policyStyles.contact}>{contactEmail}</p>
+        </section>
+      </article>
+    </main>
+  );
+}
+
 
 function PublicPolicyRouter() {
   const cleanPath = String(window.location.pathname || "/").replace(/\/+$/, "") || "/";
