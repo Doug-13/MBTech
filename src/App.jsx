@@ -1034,7 +1034,408 @@ function AiParams({ company }) {
   return <div className="page">{(cr || modal) && <PModal param={modal} onClose={() => { setCr(false); setModal(null); }} onSave={save} />}<div className="sec-h"><div><div className="tx-title">Parâmetros da IA</div><div className="tx-meta" style={{ marginTop: 3 }}>Dados que o agente N8N usa para responder clientes · {company.name}</div></div><button className="btn btn-gold" onClick={() => setCr(true)}>{Ic.plus} Novo parâmetro</button></div><div className="card p20" style={{ marginBottom: 16, display: "flex", alignItems: "flex-start", gap: 13 }}><div style={{ width: 36, height: 36, background: "var(--a50)", borderRadius: "var(--r8)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🤖</div><div><div style={{ fontSize: 14, fontWeight: 700, color: "var(--n800)", marginBottom: 3 }}>Como funciona</div><div className="tx-body" style={{ fontSize: 13 }}>O agente do N8N consulta estes parâmetros via API usando a empresa autenticada. Cada empresa tem dados completamente isolados.</div></div></div>{err && <div className="l-err">{err}</div>}{loading && <div className="tx-meta">Carregando parâmetros...</div>}{params.length === 0 ? <div className="empty card p20"><div className="empty-ico">🔑</div><div className="empty-txt">Nenhum parâmetro cadastrado.</div></div> : <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>{params.map((p, i) => <div key={p.id} className="p-row" style={{ animationDelay: `${i * 0.05}s` }}><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 5 }}><span className="p-key">{p.parameter_key}</span>{!p.is_active && <span className="badge badge-amber">Inativo</span>}</div><div style={{ fontSize: 13.5, fontWeight: 400, color: "var(--n600)", lineHeight: 1.55, marginBottom: 2 }}>{p.parameter_value}</div>{p.description && <div className="tx-meta">{p.description}</div>}</div><div style={{ display: "flex", alignItems: "center", gap: 7, flexShrink: 0 }}><div className="tg-wrap" onClick={() => toggle(p)}><div className={`tg ${p.is_active ? "on" : ""}`} style={{ transform: "scale(.82)" }} /></div><button className="btn btn-outline btn-sm" onClick={() => setModal(p)}>{Ic.edit}</button><button className="btn btn-del btn-sm" onClick={() => remove(p.id)}>{Ic.del}</button></div></div>)}</div>}</div>;
 }
 
+
+function isPublicPolicyPath(pathname) {
+  const cleanPath = String(pathname || "/").replace(/\/+$/, "") || "/";
+
+  return (
+    cleanPath === "/politicas" ||
+    cleanPath === "/politicas/bibliotech" ||
+    cleanPath === "/politicas/churchapp"
+  );
+}
+
+const policyStyles = {
+  page: {
+    minHeight: "100vh",
+    background: "#f8f7f4",
+    color: "#1b1b18",
+    fontFamily:
+      "'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    padding: "40px 20px",
+  },
+  centerPage: {
+    minHeight: "100vh",
+    background: "#f8f7f4",
+    color: "#1b1b18",
+    fontFamily:
+      "'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    padding: "40px 20px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  document: {
+    width: "100%",
+    maxWidth: 920,
+    margin: "0 auto",
+    background: "#ffffff",
+    border: "1px solid #eeeeeb",
+    borderRadius: 28,
+    padding: 32,
+    boxShadow: "0 20px 60px rgba(0,0,0,.08)",
+  },
+  card: {
+    width: "100%",
+    maxWidth: 760,
+    background: "#ffffff",
+    border: "1px solid #eeeeeb",
+    borderRadius: 28,
+    padding: 32,
+    boxShadow: "0 20px 60px rgba(0,0,0,.08)",
+  },
+  badge: {
+    display: "inline-flex",
+    padding: "7px 12px",
+    borderRadius: 999,
+    background: "#fffbeb",
+    color: "#b45309",
+    fontSize: 12,
+    fontWeight: 800,
+    textTransform: "uppercase",
+    letterSpacing: ".08em",
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 38,
+    lineHeight: 1.1,
+    fontWeight: 800,
+    letterSpacing: "-.04em",
+    margin: 0,
+    marginBottom: 10,
+  },
+  description: {
+    fontSize: 15,
+    lineHeight: 1.8,
+    color: "#4b4b46",
+    margin: 0,
+    marginBottom: 12,
+  },
+  updated: {
+    color: "#777771",
+    fontSize: 14,
+    margin: 0,
+  },
+  header: {
+    borderBottom: "1px solid #eeeeeb",
+    paddingBottom: 22,
+    marginBottom: 26,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  subtitle: {
+    fontSize: 19,
+    fontWeight: 800,
+    margin: 0,
+    marginBottom: 10,
+    color: "#1b1b18",
+  },
+  contact: {
+    fontSize: 15,
+    fontWeight: 800,
+    color: "#b45309",
+    margin: 0,
+  },
+  links: {
+    display: "grid",
+    gap: 12,
+    marginTop: 24,
+  },
+  linkCard: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+    padding: 18,
+    borderRadius: 18,
+    background: "#fafaf8",
+    border: "1px solid #eeeeeb",
+    textDecoration: "none",
+    color: "#1b1b18",
+  },
+  linkTitle: {
+    display: "block",
+    fontSize: 16,
+    fontWeight: 800,
+    marginBottom: 4,
+  },
+  linkDescription: {
+    fontSize: 13,
+    color: "#777771",
+    margin: 0,
+    lineHeight: 1.5,
+  },
+  arrow: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    background: "#101010",
+    color: "#ffffff",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: 800,
+    flexShrink: 0,
+  },
+};
+
+function PolicyListPage() {
+  return (
+    <main style={policyStyles.centerPage}>
+      <style>{css}</style>
+
+      <section style={policyStyles.card}>
+        <div style={policyStyles.badge}>MB Tech</div>
+
+        <h1 style={policyStyles.title}>Políticas de Privacidade</h1>
+
+        <p style={policyStyles.description}>
+          Esta página reúne as políticas de privacidade públicas dos aplicativos
+          disponibilizados pela MB Tech.
+        </p>
+
+        <div style={policyStyles.links}>
+          <a href="/politicas/bibliotech" style={policyStyles.linkCard}>
+            <div>
+              <strong style={policyStyles.linkTitle}>Bibliotech</strong>
+              <p style={policyStyles.linkDescription}>
+                Política de privacidade do aplicativo Bibliotech.
+              </p>
+            </div>
+            <span style={policyStyles.arrow}>→</span>
+          </a>
+
+          <a href="/politicas/churchapp" style={policyStyles.linkCard}>
+            <div>
+              <strong style={policyStyles.linkTitle}>ChurchApp</strong>
+              <p style={policyStyles.linkDescription}>
+                Política de privacidade do aplicativo ChurchApp.
+              </p>
+            </div>
+            <span style={policyStyles.arrow}>→</span>
+          </a>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function PolicyDocumentPage({ app }) {
+  const isBibliotech = app === "bibliotech";
+
+  const appName = isBibliotech ? "Bibliotech" : "ChurchApp";
+  const updatedAt = "22 de maio de 2026";
+  const contactEmail = PLATFORM.supportEmail || "suporte@mbtech.com.br";
+
+  return (
+    <main style={policyStyles.page}>
+      <style>{css}</style>
+
+      <article style={policyStyles.document}>
+        <header style={policyStyles.header}>
+          <div style={policyStyles.badge}>{appName}</div>
+
+          <h1 style={policyStyles.title}>Política de Privacidade</h1>
+
+          <p style={policyStyles.updated}>
+            Última atualização: {updatedAt}
+          </p>
+        </header>
+
+        <section style={policyStyles.section}>
+          <p style={policyStyles.description}>
+            Esta Política de Privacidade descreve como o aplicativo {appName}
+            coleta, utiliza, armazena e protege as informações dos usuários.
+            Ao utilizar o aplicativo, o usuário declara estar ciente e de acordo
+            com as práticas descritas nesta política.
+          </p>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>1. Informações coletadas</h2>
+
+          {isBibliotech ? (
+            <>
+              <p style={policyStyles.description}>
+                O Bibliotech pode coletar informações fornecidas diretamente pelo
+                usuário, como nome, e-mail, dados de perfil, preferências de
+                leitura, livros cadastrados, status de leitura e demais
+                informações inseridas voluntariamente no aplicativo.
+              </p>
+
+              <p style={policyStyles.description}>
+                Também podem ser coletadas informações técnicas necessárias para
+                o funcionamento da aplicação, como identificadores do dispositivo,
+                dados de autenticação, registros de acesso e informações de uso.
+              </p>
+            </>
+          ) : (
+            <>
+              <p style={policyStyles.description}>
+                O ChurchApp pode coletar informações fornecidas diretamente pelo
+                usuário, como nome, e-mail, telefone, foto de perfil, vínculo com
+                igreja, permissões de acesso, participação em células, eventos,
+                avisos e demais informações necessárias para o funcionamento da
+                aplicação.
+              </p>
+
+              <p style={policyStyles.description}>
+                Também podem ser coletadas informações técnicas relacionadas ao
+                uso do aplicativo, autenticação, dispositivo, registros de acesso
+                e interações realizadas dentro da plataforma.
+              </p>
+            </>
+          )}
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>2. Uso das informações</h2>
+
+          {isBibliotech ? (
+            <>
+              <p style={policyStyles.description}>
+                As informações coletadas são utilizadas para permitir o
+                funcionamento do aplicativo, gerenciar bibliotecas pessoais,
+                organizar livros, exibir informações relacionadas ao perfil do
+                usuário e melhorar a experiência de uso.
+              </p>
+
+              <p style={policyStyles.description}>
+                Os dados também podem ser utilizados para autenticação,
+                segurança, prevenção de uso indevido, suporte ao usuário e
+                melhoria contínua dos recursos oferecidos.
+              </p>
+            </>
+          ) : (
+            <>
+              <p style={policyStyles.description}>
+                As informações coletadas são utilizadas para permitir o
+                funcionamento do ChurchApp, incluindo cadastro de membros,
+                gerenciamento de igrejas, células, eventos, notícias,
+                aniversariantes, permissões de acesso e demais funcionalidades
+                relacionadas à comunidade.
+              </p>
+
+              <p style={policyStyles.description}>
+                Os dados também podem ser utilizados para autenticação,
+                segurança, comunicação interna, suporte ao usuário e melhoria
+                contínua da aplicação.
+              </p>
+            </>
+          )}
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>3. Compartilhamento de informações</h2>
+
+          {isBibliotech ? (
+            <p style={policyStyles.description}>
+              O Bibliotech não vende dados pessoais dos usuários. As informações
+              poderão ser compartilhadas apenas quando necessário para o
+              funcionamento do serviço, cumprimento de obrigação legal, proteção
+              dos direitos da aplicação ou mediante consentimento do usuário.
+            </p>
+          ) : (
+            <>
+              <p style={policyStyles.description}>
+                O ChurchApp não vende dados pessoais dos usuários. Algumas
+                informações podem ser visualizadas por administradores ou membros
+                autorizados da igreja, de acordo com as permissões e
+                funcionalidades disponíveis no aplicativo.
+              </p>
+
+              <p style={policyStyles.description}>
+                O compartilhamento também poderá ocorrer quando necessário para
+                cumprimento de obrigação legal, proteção de direitos ou operação
+                técnica do serviço.
+              </p>
+            </>
+          )}
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>4. Armazenamento e segurança</h2>
+
+          <p style={policyStyles.description}>
+            As informações são armazenadas em ambientes protegidos e utilizadas
+            com medidas técnicas e organizacionais razoáveis para preservar a
+            segurança dos dados. Apesar dos esforços de proteção, nenhum sistema
+            eletrônico é completamente livre de riscos.
+          </p>
+        </section>
+
+        {!isBibliotech && (
+          <section style={policyStyles.section}>
+            <h2 style={policyStyles.subtitle}>5. Permissões do aplicativo</h2>
+
+            <p style={policyStyles.description}>
+              O ChurchApp poderá solicitar permissões do dispositivo apenas
+              quando forem necessárias para funcionalidades específicas, como
+              seleção de imagens, envio de fotos ou recursos relacionados à
+              experiência do usuário.
+            </p>
+          </section>
+        )}
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>
+            {isBibliotech ? "5" : "6"}. Direitos do usuário
+          </h2>
+
+          <p style={policyStyles.description}>
+            O usuário pode solicitar acesso, correção ou exclusão de seus dados,
+            quando aplicável, entrando em contato pelos canais oficiais de
+            suporte informados nesta política.
+          </p>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>
+            {isBibliotech ? "6" : "7"}. Alterações nesta política
+          </h2>
+
+          <p style={policyStyles.description}>
+            Esta Política de Privacidade poderá ser atualizada periodicamente.
+            A versão mais recente estará sempre disponível nesta página pública.
+          </p>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>
+            {isBibliotech ? "7" : "8"}. Contato
+          </h2>
+
+          <p style={policyStyles.description}>
+            Em caso de dúvidas sobre esta Política de Privacidade, entre em
+            contato pelo e-mail:
+          </p>
+
+          <p style={policyStyles.contact}>{contactEmail}</p>
+        </section>
+      </article>
+    </main>
+  );
+}
+
+function PublicPolicyRouter() {
+  const cleanPath = String(window.location.pathname || "/").replace(/\/+$/, "") || "/";
+
+  if (cleanPath === "/politicas/bibliotech") {
+    return <PolicyDocumentPage app="bibliotech" />;
+  }
+
+  if (cleanPath === "/politicas/churchapp") {
+    return <PolicyDocumentPage app="churchapp" />;
+  }
+
+  return <PolicyListPage />;
+}
+
+
 export default function App() {
+  if (isPublicPolicyPath(window.location.pathname)) return <PublicPolicyRouter />;
+
   if (window.location.pathname.startsWith("/admin")) return <AdminApp />;
 
   const [session, setSession] = useState(() => getSavedSession());
