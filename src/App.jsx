@@ -1042,7 +1042,8 @@ function isPublicPolicyPath(pathname) {
     cleanPath === "/politicas" ||
     cleanPath === "/politicas/bibliotech" ||
     cleanPath === "/politicas/churchapp" ||
-    cleanPath === "/politicas/excluir-conta-churchapp"
+    cleanPath === "/politicas/excluir-conta-churchapp" ||
+    cleanPath === "/politicas/seguranca-infantil-churchapp"
   );
 }
 
@@ -1561,6 +1562,9 @@ function PublicPolicyRouter() {
 
   if (cleanPath === "/politicas/excluir-conta-churchapp") {
     return <DeleteAccountChurchAppPage />;
+  }
+  if (cleanPath === "/politicas/seguranca-infantil-churchapp") {
+    return <NormasSegurancaInfantilChurchAppPage />;
   }
 
   return <PolicyListPage />;
