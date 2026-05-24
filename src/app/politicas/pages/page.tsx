@@ -43,7 +43,7 @@ export default function PoliticasPage() {
           </Link>
 
           <Link
-            href="/politicas/churchapp/excluir-conta-churchapp"
+            href="/politicas/excluir-conta-churchapp"
             style={styles.linkCard}
           >
             <div>
