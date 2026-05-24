@@ -1041,7 +1041,8 @@ function isPublicPolicyPath(pathname) {
   return (
     cleanPath === "/politicas" ||
     cleanPath === "/politicas/bibliotech" ||
-    cleanPath === "/politicas/churchapp"
+    cleanPath === "/politicas/churchapp" ||
+    cleanPath === "/politicas/excluir-conta-churchapp"
   );
 }
 
@@ -1211,6 +1212,16 @@ function PolicyListPage() {
               <strong style={policyStyles.linkTitle}>ChurchApp</strong>
               <p style={policyStyles.linkDescription}>
                 Política de privacidade do aplicativo ChurchApp.
+              </p>
+            </div>
+            <span style={policyStyles.arrow}>→</span>
+          </a>
+
+          <a href="/politicas/excluir-conta-churchapp" style={policyStyles.linkCard}>
+            <div>
+              <strong style={policyStyles.linkTitle}>Exclusão de Conta — ChurchApp</strong>
+              <p style={policyStyles.linkDescription}>
+                Página pública para solicitar a exclusão de conta e dados associados ao ChurchApp.
               </p>
             </div>
             <span style={policyStyles.arrow}>→</span>
@@ -1418,6 +1429,125 @@ function PolicyDocumentPage({ app }) {
   );
 }
 
+function DeleteAccountChurchAppPage() {
+  const contactEmail = PLATFORM.supportEmail || "suporte@mbtech.com.br";
+  const subject = "Solicitação de exclusão de conta — ChurchApp";
+  const mailto = `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}`;
+
+  return (
+    <main style={policyStyles.page}>
+      <style>{css}</style>
+
+      <article style={policyStyles.document}>
+        <header style={policyStyles.header}>
+          <div style={policyStyles.badge}>ChurchApp</div>
+
+          <h1 style={policyStyles.title}>Exclusão de Conta e Dados</h1>
+
+          <p style={policyStyles.updated}>
+            Página pública para solicitação de exclusão de conta e dados associados ao ChurchApp.
+          </p>
+        </header>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>1. Como solicitar a exclusão</h2>
+
+          <p style={policyStyles.description}>
+            Para solicitar a exclusão da sua conta e dos dados associados ao ChurchApp,
+            envie um e-mail para:
+          </p>
+
+          <p style={policyStyles.contact}>
+            <a
+              href={mailto}
+              style={{
+                color: "#b45309",
+                textDecoration: "none",
+                fontWeight: 800,
+              }}
+            >
+              {contactEmail}
+            </a>
+          </p>
+
+          <p style={policyStyles.description}>
+            No assunto do e-mail, informe:
+            <br />
+            <strong>Solicitação de exclusão de conta — ChurchApp</strong>
+          </p>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>2. Dados necessários para localizar sua conta</h2>
+
+          <p style={policyStyles.description}>
+            Para localizar corretamente o cadastro, informe no corpo do e-mail:
+          </p>
+
+          <ul style={{ margin: "0 0 0 20px", color: "#4b4b46", lineHeight: 1.8 }}>
+            <li>Nome completo;</li>
+            <li>E-mail utilizado no aplicativo;</li>
+            <li>Telefone cadastrado, se houver;</li>
+            <li>Nome da igreja vinculada, se houver;</li>
+            <li>Confirmação de que deseja excluir sua conta e dados associados.</li>
+          </ul>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>3. O que poderá ser excluído</h2>
+
+          <p style={policyStyles.description}>
+            Após a confirmação da solicitação e validação da identidade do solicitante,
+            poderemos excluir ou anonimizar, quando aplicável:
+          </p>
+
+          <ul style={{ margin: "0 0 0 20px", color: "#4b4b46", lineHeight: 1.8 }}>
+            <li>Dados da conta do usuário;</li>
+            <li>Dados de perfil, como nome, e-mail, telefone e foto;</li>
+            <li>Vínculo do usuário com igreja, célula, ministério ou função;</li>
+            <li>Permissões de acesso associadas ao usuário;</li>
+            <li>Outras informações pessoais associadas à conta.</li>
+          </ul>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>4. Dados que podem permanecer</h2>
+
+          <p style={policyStyles.description}>
+            Alguns dados poderão ser mantidos quando necessário para cumprir obrigações legais,
+            preservar registros de segurança, prevenir fraudes, manter integridade administrativa
+            ou respeitar limitações técnicas de backup.
+          </p>
+
+          <p style={policyStyles.description}>
+            Quando possível, os dados pessoais serão removidos ou desvinculados da conta do usuário.
+          </p>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>5. Prazo de processamento</h2>
+
+          <p style={policyStyles.description}>
+            A solicitação será analisada e processada em prazo razoável após o recebimento do e-mail
+            e confirmação da identidade do solicitante.
+          </p>
+        </section>
+
+        <section style={policyStyles.section}>
+          <h2 style={policyStyles.subtitle}>6. Contato</h2>
+
+          <p style={policyStyles.description}>
+            Em caso de dúvidas sobre exclusão de conta, privacidade ou tratamento de dados pessoais
+            no ChurchApp, entre em contato pelo e-mail:
+          </p>
+
+          <p style={policyStyles.contact}>{contactEmail}</p>
+        </section>
+      </article>
+    </main>
+  );
+}
+
 function PublicPolicyRouter() {
   const cleanPath = String(window.location.pathname || "/").replace(/\/+$/, "") || "/";
 
@@ -1427,6 +1557,10 @@ function PublicPolicyRouter() {
 
   if (cleanPath === "/politicas/churchapp") {
     return <PolicyDocumentPage app="churchapp" />;
+  }
+
+  if (cleanPath === "/politicas/excluir-conta-churchapp") {
+    return <DeleteAccountChurchAppPage />;
   }
 
   return <PolicyListPage />;
