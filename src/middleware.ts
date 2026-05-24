@@ -36,17 +36,11 @@ function applyCorsHeaders(req: NextRequest, response: NextResponse) {
   return response;
 }
 
-const publicRoutes = [
-  "/login",
-  "/politicas",
-  "/politicas/bibliotech",
-  "/politicas/churchapp",
-  "/politicas/excluir-conta-churchapp",
-];
-
-function isPublicRoute(pathname: string) {
-  return publicRoutes.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
+function isPublicPath(pathname: string) {
+  return (
+    pathname === "/login" ||
+    pathname === "/politicas" ||
+    pathname.startsWith("/politicas/")
   );
 }
 
@@ -71,7 +65,7 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (isPublicRoute(pathname)) {
+  if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
