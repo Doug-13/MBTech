@@ -1,3 +1,4 @@
+import type React from "react";
 import Link from "next/link";
 
 export const metadata = {
@@ -35,6 +36,23 @@ export default function PoliticasPage() {
               <strong style={styles.linkTitle}>ChurchApp</strong>
               <p style={styles.linkDescription}>
                 Política de privacidade do aplicativo ChurchApp.
+              </p>
+            </div>
+
+            <span style={styles.arrow}>→</span>
+          </Link>
+
+          <Link
+            href="/politicas/churchapp/excluir-conta-churchapp"
+            style={styles.linkCard}
+          >
+            <div>
+              <strong style={styles.linkTitle}>
+                Exclusão de Conta — ChurchApp
+              </strong>
+              <p style={styles.linkDescription}>
+                Página pública para solicitar a exclusão de conta e dados
+                associados ao ChurchApp.
               </p>
             </div>
 
