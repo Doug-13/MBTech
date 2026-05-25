@@ -5,24 +5,31 @@ import "./ClientChatWidget.css";
  * Widget flutuante para testar atendimento IA via n8n.
  *
  * Uso:
+ *
+ * <ClientChatWidget
+ *   clientProfile={{
+ *     clientId: company?.id,
+ *     clientName: company?.name,
+ *     tenantId: company?.id,
+ *     segment: "eventos",
+ *     assistantName: `Assistente ${company?.name}`,
+ *     userName: user?.name,
+ *     userPhone: user?.phone,
+ *   }}
+ * />
+ *
+ * Também pode usar:
+ *
  * <ClientChatWidget
  *   webhookUrl="https://SEU-N8N/webhook-test/teste-chat"
- *   clientProfile={{
- *     clientId: "cliente-001",
- *     clientName: "MB Agenda IA",
- *     tenantId: "tenant-mb",
- *     segment: "eventos",
- *     assistantName: "Assistente MB",
- *     userName: "Douglas",
- *     userPhone: "5599999999999"
- *   }}
+ *   clientProfile={{ ... }}
  * />
  */
 export default function ClientChatWidget({
   webhookUrl,
   clientProfile = {},
   title = "Atendimento IA",
-  subtitle = "Teste do assistente",
+  subtitle = "Teste IA n8n",
 }) {
   const finalWebhookUrl =
     webhookUrl ||
@@ -44,6 +51,7 @@ export default function ClientChatWidget({
 
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
+
   const inputRef = useRef(null);
 
   const normalizedProfile = useMemo(() => {
@@ -85,10 +93,24 @@ export default function ClientChatWidget({
       return;
     }
 
+    console.log("[ClientChatWidget] Configuração inicial:", {
+      webhookUrl,
+      envUrl: import.meta.env.VITE_N8N_TEST_CHAT_WEBHOOK_URL,
+      finalWebhookUrl,
+      normalizedProfile,
+    });
+
     if (!finalWebhookUrl) {
       addBotMessage(
-        "Webhook do n8n não configurado. Configure VITE_N8N_TEST_CHAT_WEBHOOK_URL no .env ou informe a propriedade webhookUrl."
+        "Webhook do n8n não configurado. Defina VITE_N8N_TEST_CHAT_WEBHOOK_URL no .env do front."
       );
+
+      console.warn("[ClientChatWidget] Webhook vazio:", {
+        webhookUrl,
+        envUrl: import.meta.env.VITE_N8N_TEST_CHAT_WEBHOOK_URL,
+        finalWebhookUrl,
+      });
+
       return;
     }
 
@@ -131,7 +153,7 @@ export default function ClientChatWidget({
         contato: remoteJid,
         remoteJid,
 
-        // Mensagem
+        // Mensagem em vários formatos para facilitar o reaproveitamento do workflow atual
         message,
         text: message,
         mensagem: message,
@@ -151,7 +173,7 @@ export default function ClientChatWidget({
 
         timestamp: nowIso,
 
-        // Simulação do payload Evolution
+        // Payload fake no padrão parecido com Evolution
         event: {
           event: "messages.upsert",
           instance: normalizedProfile.clientId,
@@ -180,7 +202,15 @@ export default function ClientChatWidget({
         profile: normalizedProfile,
       };
 
-      console.log("[ClientChatWidget] Enviando payload para n8n:", payload);
+      console.log("[ClientChatWidget] Enviando mensagem para n8n:", {
+        finalWebhookUrl,
+        message,
+        clientId: normalizedProfile.clientId,
+        clientName: normalizedProfile.clientName,
+        phone: normalizedProfile.userPhone,
+      });
+
+      console.log("[ClientChatWidget] Payload completo:", payload);
 
       const response = await fetch(finalWebhookUrl, {
         method: "POST",
@@ -192,9 +222,11 @@ export default function ClientChatWidget({
 
       const data = await safeReadJson(response);
 
-      console.log("[ClientChatWidget] Resposta do n8n:", {
-        status: response.status,
+      console.log("[ClientChatWidget] Status HTTP n8n:", response.status);
+
+      console.log("[ClientChatWidget] Resposta bruta do n8n:", {
         ok: response.ok,
+        status: response.status,
         data,
       });
 
@@ -205,6 +237,12 @@ export default function ClientChatWidget({
           `Erro ao chamar o n8n. Status HTTP: ${response.status}`;
 
         addBotMessage(errorMessage);
+
+        console.error("[ClientChatWidget] Erro HTTP n8n:", {
+          status: response.status,
+          data,
+        });
+
         return;
       }
 
@@ -220,11 +258,15 @@ export default function ClientChatWidget({
 
       addBotMessage(String(reply));
     } catch (error) {
-      addBotMessage(
-        "Não consegui conectar ao n8n. Verifique se a URL do webhook está correta e se o CORS está liberado."
-      );
+      console.error("[ClientChatWidget] Erro completo ao chamar n8n:", {
+        error,
+        message: error?.message,
+        finalWebhookUrl,
+      });
 
-      console.error("[ClientChatWidget] Erro ao enviar mensagem:", error);
+      addBotMessage(
+        "Não consegui conectar ao n8n. Verifique se a URL do webhook está correta, se o n8n está ouvindo e se o CORS está liberado."
+      );
     } finally {
       setIsSending(false);
     }
