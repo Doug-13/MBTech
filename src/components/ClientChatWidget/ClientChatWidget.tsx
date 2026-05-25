@@ -6,7 +6,7 @@ import "./ClientChatWidget.css";
  *
  * Uso:
  * <ClientChatWidget
- *   webhookUrl="https://SEU-N8N/webhook/teste-chat"
+ *   webhookUrl="https://SEU-N8N/webhook-test/teste-chat"
  *   clientProfile={{
  *     clientId: "cliente-001",
  *     clientName: "MB Agenda IA",
@@ -24,15 +24,24 @@ export default function ClientChatWidget({
   title = "Atendimento IA",
   subtitle = "Teste do assistente",
 }) {
+  const finalWebhookUrl =
+    webhookUrl ||
+    import.meta.env.VITE_N8N_TEST_CHAT_WEBHOOK_URL ||
+    "";
+
   const [isOpen, setIsOpen] = useState(false);
+
   const [messages, setMessages] = useState(() => [
     {
       id: cryptoRandomId(),
       role: "bot",
-      text: `Olá! Eu sou o ${clientProfile.assistantName || "assistente virtual"}. Como posso ajudar?`,
+      text: `Olá! Eu sou o ${
+        clientProfile.assistantName || "assistente virtual"
+      }. Como posso ajudar?`,
       createdAt: new Date().toISOString(),
     },
   ]);
+
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const inputRef = useRef(null);
@@ -41,7 +50,10 @@ export default function ClientChatWidget({
     return {
       clientId: clientProfile.clientId || "cliente-teste",
       clientName: clientProfile.clientName || "Cliente Teste",
-      tenantId: clientProfile.tenantId || "tenant-teste",
+      tenantId:
+        clientProfile.tenantId ||
+        clientProfile.clientId ||
+        "tenant-teste",
       segment: clientProfile.segment || "geral",
       assistantName: clientProfile.assistantName || "Assistente IA",
       userName: clientProfile.userName || "Visitante Teste",
@@ -73,8 +85,10 @@ export default function ClientChatWidget({
       return;
     }
 
-    if (!webhookUrl) {
-      addBotMessage("Webhook do n8n não configurado. Informe a URL em webhookUrl.");
+    if (!finalWebhookUrl) {
+      addBotMessage(
+        "Webhook do n8n não configurado. Configure VITE_N8N_TEST_CHAT_WEBHOOK_URL no .env ou informe a propriedade webhookUrl."
+      );
       return;
     }
 
@@ -90,26 +104,85 @@ export default function ClientChatWidget({
     setIsSending(true);
 
     try {
+      const remoteJid = `${normalizedProfile.userPhone}@s.whatsapp.net`;
+      const fakeMessageId = `widget-${Date.now()}`;
+      const nowIso = new Date().toISOString();
+
       const payload = {
-        channel: normalizedProfile.channel,
+        // Controle interno para o n8n saber que veio do widget
+        _testMode: true,
+        _channel: "web-widget-test",
+        _source: "client-web-widget",
+
+        // Dados do cliente logado
+        channel: "web-widget-test",
         source: "client-web-widget",
         clientId: normalizedProfile.clientId,
         clientName: normalizedProfile.clientName,
         tenantId: normalizedProfile.tenantId,
         segment: normalizedProfile.segment,
+
+        // Dados do usuário/contato
         name: normalizedProfile.userName,
+        nome: normalizedProfile.userName,
         phone: normalizedProfile.userPhone,
+        number: normalizedProfile.userPhone,
         from: normalizedProfile.userPhone,
-        remoteJid: `${normalizedProfile.userPhone}@web-widget.local`,
+        contato: remoteJid,
+        remoteJid,
+
+        // Mensagem
         message,
         text: message,
+        mensagem: message,
+        conversation: message,
+
+        // Flags simulando WhatsApp/Evolution
         messageType: "conversation",
         fromMe: false,
-        timestamp: new Date().toISOString(),
+        isFromMe: false,
+        isGroup: false,
+        isStatus: false,
+        isBroadcast: false,
+        isAudio: false,
+        hasBinaryAudio: false,
+        binaryFieldName: "",
+        isValidMessage: true,
+
+        timestamp: nowIso,
+
+        // Simulação do payload Evolution
+        event: {
+          event: "messages.upsert",
+          instance: normalizedProfile.clientId,
+          server_url: "web-widget-test",
+          apikey: "web-widget-test",
+
+          Info: {
+            Id: fakeMessageId,
+            RemoteJid: remoteJid,
+            RemoteJidAlt: remoteJid,
+            Sender: remoteJid,
+            PushName: normalizedProfile.userName,
+            FromMe: false,
+            IsGroup: false,
+            IsBroadcast: false,
+            IsStatus: false,
+            Type: "conversation",
+            MessageTimestamp: Math.floor(Date.now() / 1000),
+          },
+
+          Message: {
+            conversation: message,
+          },
+        },
+
         profile: normalizedProfile,
       };
 
-      const response = await fetch(webhookUrl, {
+      console.log("[ClientChatWidget] Enviando payload para n8n:", payload);
+
+      const response = await fetch(finalWebhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -118,6 +191,12 @@ export default function ClientChatWidget({
       });
 
       const data = await safeReadJson(response);
+
+      console.log("[ClientChatWidget] Resposta do n8n:", {
+        status: response.status,
+        ok: response.ok,
+        data,
+      });
 
       if (!response.ok) {
         const errorMessage =
@@ -135,6 +214,8 @@ export default function ClientChatWidget({
         data?.message ||
         data?.text ||
         data?.output ||
+        data?.resposta ||
+        data?.responseText ||
         "Recebi sua mensagem, mas o n8n não retornou um campo de resposta reconhecido.";
 
       addBotMessage(String(reply));
@@ -163,11 +244,16 @@ export default function ClientChatWidget({
   return (
     <div className="client-chat-widget">
       {isOpen && (
-        <section className="client-chat-window" aria-label="Chat de teste com IA">
+        <section
+          className="client-chat-window"
+          aria-label="Chat de teste com IA"
+        >
           <header className="client-chat-header">
             <div>
               <strong>{title}</strong>
-              <span>{subtitle} • {normalizedProfile.clientName}</span>
+              <span>
+                {subtitle} • {normalizedProfile.clientName}
+              </span>
             </div>
 
             <button
