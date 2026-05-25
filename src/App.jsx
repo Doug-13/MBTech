@@ -622,6 +622,201 @@ const css = `
     .c2,.c3 { grid-column:span 1; }
     .fsect { grid-column:span 1; }
   }
+
+  /* ── CLIENT CHAT WIDGET N8N ───────────────── */
+
+  .client-chat-widget {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 9999;
+    font-family: var(--f);
+  }
+
+  .client-chat-button {
+    width: 62px;
+    height: 62px;
+    border: 0;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #111827, #020617 58%, #d97706 150%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.32);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    font-size: 34px;
+    line-height: 1;
+  }
+
+  .client-chat-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 55px rgba(15, 23, 42, 0.38);
+  }
+
+  .client-chat-window {
+    position: absolute;
+    right: 0;
+    bottom: 78px;
+    width: 380px;
+    height: 560px;
+    max-height: calc(100vh - 125px);
+    background: #ffffff;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+    display: flex;
+    flex-direction: column;
+    animation: scaleIn .18s ease both;
+  }
+
+  .client-chat-header {
+    padding: 18px 18px 16px;
+    background: linear-gradient(135deg, #111827, #1f2937);
+    color: #ffffff;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .client-chat-header strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .client-chat-header span {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    opacity: 0.8;
+  }
+
+  .client-chat-close {
+    border: 0;
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    border-radius: 12px;
+    width: 34px;
+    height: 34px;
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .client-chat-profile {
+    padding: 10px 16px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+    color: #475569;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .client-chat-profile strong {
+    color: #0f172a;
+    text-transform: capitalize;
+  }
+
+  .client-chat-messages {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    background:
+      radial-gradient(circle at top left, rgba(245, 158, 11, 0.10), transparent 34%),
+      #f8fafc;
+  }
+
+  .client-chat-message {
+    max-width: 84%;
+    padding: 11px 13px;
+    border-radius: 16px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .client-chat-message-bot {
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid #e5e7eb;
+    border-bottom-left-radius: 5px;
+  }
+
+  .client-chat-message-user {
+    background: #111827;
+    color: #ffffff;
+    margin-left: auto;
+    border-bottom-right-radius: 5px;
+  }
+
+  .client-chat-loading {
+    color: #64748b;
+    font-style: italic;
+  }
+
+  .client-chat-form {
+    padding: 14px;
+    background: #ffffff;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 8px;
+  }
+
+  .client-chat-form input {
+    flex: 1;
+    min-width: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 12px 13px;
+    outline: none;
+    font-size: 14px;
+    color: #0f172a;
+  }
+
+  .client-chat-form input:focus {
+    border-color: #d97706;
+    box-shadow: 0 0 0 3px rgba(217,119,6,.10);
+  }
+
+  .client-chat-form button {
+    border: 0;
+    border-radius: 14px;
+    padding: 0 15px;
+    background: #111827;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .client-chat-form button:disabled,
+  .client-chat-form input:disabled {
+    opacity: 0.62;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 520px) {
+    .client-chat-widget {
+      right: 14px;
+      bottom: 14px;
+    }
+
+    .client-chat-window {
+      width: calc(100vw - 28px);
+      height: min(560px, calc(100vh - 105px));
+      bottom: 76px;
+    }
+  }
+
 `;
 
 const Ic = {
@@ -682,6 +877,206 @@ function Bdg({ status }) {
     revisao_humana: "Revisão",
   };
   return <span className={`badge ${c[key] || "badge-amber"}`}>{l[key] || status || "—"}</span>;
+}
+
+
+function ClientChatWidget({ webhookUrl, clientProfile = {}, title = "Atendimento IA", subtitle = "Teste do assistente" }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState(() => [
+    {
+      id: makeChatId(),
+      role: "bot",
+      text: `Olá! Eu sou o ${clientProfile.assistantName || "assistente virtual"}. Como posso ajudar?`,
+      createdAt: new Date().toISOString(),
+    },
+  ]);
+  const [inputText, setInputText] = useState("");
+  const [isSending, setIsSending] = useState(false);
+
+  const normalizedProfile = useMemo(() => {
+    const phone = onlyNumbers(
+      clientProfile.userPhone ||
+        clientProfile.phone ||
+        clientProfile.whatsapp ||
+        clientProfile.customer_phone ||
+        "5599999999999"
+    );
+
+    return {
+      clientId: clientProfile.clientId || clientProfile.companyId || "cliente-teste",
+      clientName: clientProfile.clientName || clientProfile.companyName || "Cliente Teste",
+      tenantId: clientProfile.tenantId || clientProfile.companyId || "tenant-teste",
+      segment: clientProfile.segment || "agenda-eventos",
+      assistantName: clientProfile.assistantName || "Assistente IA",
+      userName: clientProfile.userName || clientProfile.name || "Visitante Teste",
+      userPhone: phone || "5599999999999",
+      channel: "web-widget-test",
+    };
+  }, [clientProfile]);
+
+  function toggleChat() {
+    setIsOpen((current) => !current);
+  }
+
+  function addBotMessage(text) {
+    setMessages((current) => [
+      ...current,
+      {
+        id: makeChatId(),
+        role: "bot",
+        text,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    const message = inputText.trim();
+    if (!message || isSending) return;
+
+    if (!webhookUrl) {
+      addBotMessage("Webhook do n8n não configurado. Defina VITE_N8N_TEST_CHAT_WEBHOOK_URL no .env do front.");
+      return;
+    }
+
+    setMessages((current) => [
+      ...current,
+      {
+        id: makeChatId(),
+        role: "user",
+        text: message,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    setInputText("");
+    setIsSending(true);
+
+    try {
+      const payload = {
+        channel: normalizedProfile.channel,
+        source: "client-web-widget",
+        clientId: normalizedProfile.clientId,
+        clientName: normalizedProfile.clientName,
+        tenantId: normalizedProfile.tenantId,
+        segment: normalizedProfile.segment,
+        name: normalizedProfile.userName,
+        phone: normalizedProfile.userPhone,
+        from: normalizedProfile.userPhone,
+        remoteJid: `${normalizedProfile.userPhone}@web-widget.local`,
+        message,
+        text: message,
+        messageType: "conversation",
+        fromMe: false,
+        timestamp: new Date().toISOString(),
+        profile: normalizedProfile,
+      };
+
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await safeReadJson(response);
+
+      if (!response.ok) {
+        addBotMessage(data?.message || data?.error || `Erro ao chamar o n8n. Status HTTP: ${response.status}`);
+        return;
+      }
+
+      const reply =
+        data?.reply ||
+        data?.response ||
+        data?.message ||
+        data?.text ||
+        data?.output ||
+        "Recebi sua mensagem, mas o n8n não retornou o campo reply.";
+
+      addBotMessage(String(reply));
+    } catch (error) {
+      console.error("[ClientChatWidget] Erro ao enviar mensagem:", error);
+      addBotMessage("Não consegui conectar ao n8n. Verifique a URL do webhook e a liberação de CORS.");
+    } finally {
+      setIsSending(false);
+    }
+  }
+
+  return (
+    <div className="client-chat-widget">
+      {isOpen && (
+        <section className="client-chat-window" aria-label="Chat de teste com IA">
+          <header className="client-chat-header">
+            <div>
+              <strong>{title}</strong>
+              <span>{subtitle} • {normalizedProfile.clientName}</span>
+            </div>
+
+            <button type="button" className="client-chat-close" onClick={toggleChat} aria-label="Fechar chat">
+              ×
+            </button>
+          </header>
+
+          <div className="client-chat-profile">
+            <span>Perfil ativo:</span>
+            <strong>{normalizedProfile.segment}</strong>
+          </div>
+
+          <main className="client-chat-messages">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={
+                  message.role === "user"
+                    ? "client-chat-message client-chat-message-user"
+                    : "client-chat-message client-chat-message-bot"
+                }
+              >
+                {message.text}
+              </div>
+            ))}
+
+            {isSending && <div className="client-chat-message client-chat-message-bot client-chat-loading">Digitando...</div>}
+          </main>
+
+          <form className="client-chat-form" onSubmit={handleSubmit}>
+            <input
+              value={inputText}
+              onChange={(event) => setInputText(event.target.value)}
+              placeholder="Digite sua mensagem..."
+              disabled={isSending}
+            />
+
+            <button type="submit" disabled={isSending || !inputText.trim()}>
+              Enviar
+            </button>
+          </form>
+        </section>
+      )}
+
+      <button type="button" className="client-chat-button" onClick={toggleChat} aria-label={isOpen ? "Fechar chat" : "Abrir chat"}>
+        {isOpen ? "×" : Ic.bot}
+      </button>
+    </div>
+  );
+}
+
+async function safeReadJson(response) {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+function onlyNumbers(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function makeChatId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function Login({ onLogin }) {
@@ -1869,6 +2264,7 @@ export default function App() {
 
   const { user, company } = session;
   const TL = { dashboard: "Dashboard", agenda: "Agenda", whatsapp: "WhatsApp IA", parametros: "Parâmetros IA" };
+  const chatWebhookUrl = import.meta.env.VITE_N8N_TEST_CHAT_WEBHOOK_URL || "";
 
   return (
     <>
@@ -1886,6 +2282,23 @@ export default function App() {
           {tab === "parametros" && <AiParams company={company} />}
         </div>
       </div>
+
+      <ClientChatWidget
+        webhookUrl={chatWebhookUrl}
+        title="Atendimento IA"
+        subtitle="Teste via n8n"
+        clientProfile={{
+          clientId: company?.id,
+          companyId: company?.id,
+          clientName: company?.name,
+          companyName: company?.name,
+          tenantId: company?.id,
+          segment: company?.segment || company?.business_segment || "agenda-eventos",
+          assistantName: `Assistente ${company?.name || PLATFORM.name}`,
+          userName: user?.name,
+          userPhone: user?.phone || company?.phone || "5599999999999",
+        }}
+      />
     </>
   );
 }

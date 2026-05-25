@@ -1,4 +1,7 @@
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  "https://mbtech-back-back.yph90z.easypanel.host/api"
+).replace(/\/$/, "");
 
 const CLIENT_STORAGE_KEY = "mb_tech_client_session";
 const ADMIN_STORAGE_KEY = "mb_tech_admin_session";
@@ -21,6 +24,7 @@ export function getSavedSession() {
 
 export function saveSession(data) {
   const previous = getSavedSession();
+
   const session = {
     token: data.token || previous?.token,
     user: data.user,
@@ -41,6 +45,7 @@ export function getSavedAdminSession() {
 
 export function saveAdminSession(data) {
   const previous = getSavedAdminSession();
+
   const session = {
     token: data.token || previous?.token,
     user: data.user,
@@ -74,7 +79,15 @@ async function request(path, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const url = `${API_URL}${path}`;
+
+  console.log("[FRONT][API] request =>", {
+    url,
+    method: options.method || "GET",
+    hasToken: Boolean(token),
+  });
+
+  const response = await fetch(url, {
     ...options,
     headers,
     credentials: "include",
@@ -94,6 +107,14 @@ async function request(path, options = {}) {
 
   if (!response.ok) {
     const message = data?.error || data?.message || `Erro HTTP ${response.status}`;
+
+    console.error("[FRONT][API] error =>", {
+      url,
+      status: response.status,
+      data,
+      message,
+    });
+
     throw new Error(message);
   }
 
