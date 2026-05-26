@@ -2287,14 +2287,10 @@ export default function App() {
         webhookUrl="https://agente-de-ia-n8n.yph90z.easypanel.host/webhook-test/teste-chat"
         clientProfile={{
           clientId: company?.id || "cliente-teste",
-          clientName: company?.name || "Danona Gourmet",
+          clientName: company?.name || "Cliente Teste",
           tenantId: company?.id || "tenant-teste",
-
-          // precisa bater com settings->>'instance_name' no banco
-          instanceName: "danona-gourmet",
-
-          segment: "Agenda - Eventos",
-          assistantName: `Assistente ${company?.name || "Danona Gourmet"}`,
+          segment: company?.segment || "eventos",
+          assistantName: `Assistente ${company?.name || "IA"}`,
           userName: user?.name || "Visitante Teste",
           userPhone: user?.phone || "5599999999999",
         }}
