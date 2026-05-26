@@ -2310,7 +2310,7 @@ export default function App() {
 
   const chatBackendUrl =
     import.meta.env.VITE_CHAT_WIDGET_BACKEND_URL ||
-    `${String(import.meta.env.VITE_API_URL || "").replace(/\/$/, "")}/chat-widget`;
+    "https://mbtech-back-back.yph90z.easypanel.host/api/chat-widget";
 
   async function loadDashboard() {
     if (!getSavedSession()?.token) return;
