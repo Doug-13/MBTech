@@ -2308,9 +2308,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [booting, setBooting] = useState(Boolean(getSavedSession()?.token));
 
-  const chatBackendUrl =
-    import.meta.env.VITE_CHAT_WIDGET_BACKEND_URL ||
-    "https://mbtech-back-back.yph90z.easypanel.host/api/chat-widget";
+  const chatBackendUrl = "https://mbtech-back-back.yph90z.easypanel.host/api/chat-widget";
 
   async function loadDashboard() {
     if (!getSavedSession()?.token) return;
@@ -2469,10 +2467,8 @@ export default function App() {
           clientId: company?.id || "a95ec1d1-f8a8-4f50-8956-46ae42388422",
           clientName: company?.name || "Danona Gourmet",
           tenantId: company?.id || "a95ec1d1-f8a8-4f50-8956-46ae42388422",
-
           instanceName: "agentechatbot",
           evolutionInstance: "agentechatbot",
-
           segment: "Agenda - Eventos",
           assistantName: `Assistente ${company?.name || "Danona Gourmet"}`,
           userName: user?.name || "Visitante Teste",
