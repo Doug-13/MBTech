@@ -2286,12 +2286,14 @@ export default function App() {
       <ClientChatWidget
         webhookUrl="https://agente-de-ia-n8n.yph90z.easypanel.host/webhook-test/teste-chat"
         clientProfile={{
-          clientId: company?.id || "cliente-teste",
+          clientId: company?.id || "a95ec1d1-f8a8-4f50-8956-46ae42388422",
           clientName: company?.name || "Danona Gourmet",
-          tenantId: company?.id || "tenant-teste",
+          tenantId: company?.id || "a95ec1d1-f8a8-4f50-8956-46ae42388422",
 
-          // precisa bater com settings->>'instance_name' no banco
-          instanceName: "danona-gourmet",
+          // IMPORTANTE:
+          // precisa ser igual ao settings.instance_name / settings.evolution_instance do banco
+          instanceName: "agentechatbot",
+          evolutionInstance: "agentechatbot",
 
           segment: "Agenda - Eventos",
           assistantName: `Assistente ${company?.name || "Danona Gourmet"}`,

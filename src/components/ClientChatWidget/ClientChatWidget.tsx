@@ -37,12 +37,6 @@ export default function ClientChatWidget({
   const inputRef = useRef(null);
 
   const normalizedProfile = useMemo(() => {
-    const visitorName = visitorForm.name || clientProfile.userName || "Visitante Teste";
-    const visitorPhone =
-      onlyNumbers(visitorForm.phone) ||
-      onlyNumbers(clientProfile.userPhone) ||
-      "5599999999999";
-
     return {
       clientId: clientProfile.clientId || "cliente-teste",
       clientName: clientProfile.clientName || "Cliente Teste",
@@ -50,16 +44,24 @@ export default function ClientChatWidget({
         clientProfile.tenantId ||
         clientProfile.clientId ||
         "tenant-teste",
-      segment: visitorForm.scenario || clientProfile.segment || "geral",
+
+      instanceName:
+        clientProfile.instanceName ||
+        clientProfile.evolutionInstance ||
+        "agentechatbot",
+
+      evolutionInstance:
+        clientProfile.evolutionInstance ||
+        clientProfile.instanceName ||
+        "agentechatbot",
+
+      segment: clientProfile.segment || "geral",
       assistantName: clientProfile.assistantName || "Assistente IA",
-      userName: visitorName,
-      userPhone: visitorPhone,
-      userEmail: visitorForm.email || "",
-      testScenario: visitorForm.scenario || "geral",
-      testNotes: visitorForm.notes || "",
+      userName: clientProfile.userName || "Visitante Teste",
+      userPhone: onlyNumbers(clientProfile.userPhone) || "5599999999999",
       channel: "web-widget-test",
     };
-  }, [clientProfile, visitorForm]);
+  }, [clientProfile]);
 
   function toggleChat() {
     setIsOpen((current) => {
@@ -249,6 +251,9 @@ export default function ClientChatWidget({
         },
 
         profile: normalizedProfile,
+        instance: normalizedProfile.instanceName,
+        instanceName: normalizedProfile.instanceName,
+        evolutionInstance: normalizedProfile.evolutionInstance,
 
         visitor: {
           name: normalizedProfile.userName,
