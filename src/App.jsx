@@ -880,18 +880,44 @@ function Bdg({ status }) {
 }
 
 
-function ClientChatWidget({ webhookUrl, clientProfile = {}, title = "Atendimento IA", subtitle = "Teste do assistente" }) {
+function ClientChatWidget({
+  backendUrl,
+  clientProfile = {},
+  title = "Atendimento IA",
+  subtitle = "Teste do assistente",
+}) {
   const [isOpen, setIsOpen] = useState(false);
+
   const [messages, setMessages] = useState(() => [
     {
       id: makeChatId(),
       role: "bot",
-      text: `Olá! Eu sou o ${clientProfile.assistantName || "assistente virtual"}. Como posso ajudar?`,
+      text: `Olá! Eu sou o ${clientProfile.assistantName || "assistente virtual"
+        }. Como posso ajudar?`,
       createdAt: new Date().toISOString(),
     },
   ]);
+
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
+
+  const finalBackendUrl = useMemo(() => {
+    if (backendUrl) return backendUrl;
+
+    const directBackendUrl = import.meta.env.VITE_CHAT_WIDGET_BACKEND_URL;
+
+    if (directBackendUrl) {
+      return directBackendUrl;
+    }
+
+    const apiUrl = import.meta.env.VITE_API_URL;
+
+    if (apiUrl) {
+      return `${String(apiUrl).replace(/\/$/, "")}/chat-widget`;
+    }
+
+    return "";
+  }, [backendUrl]);
 
   const normalizedProfile = useMemo(() => {
     const phone = onlyNumbers(
@@ -903,13 +929,33 @@ function ClientChatWidget({ webhookUrl, clientProfile = {}, title = "Atendimento
     );
 
     return {
-      clientId: clientProfile.clientId || clientProfile.companyId || "cliente-teste",
-      clientName: clientProfile.clientName || clientProfile.companyName || "Cliente Teste",
-      tenantId: clientProfile.tenantId || clientProfile.companyId || "tenant-teste",
+      clientId:
+        clientProfile.clientId || clientProfile.companyId || "cliente-teste",
+
+      clientName:
+        clientProfile.clientName ||
+        clientProfile.companyName ||
+        "Cliente Teste",
+
+      tenantId:
+        clientProfile.tenantId || clientProfile.companyId || "tenant-teste",
+
       segment: clientProfile.segment || "agenda-eventos",
+
       assistantName: clientProfile.assistantName || "Assistente IA",
-      userName: clientProfile.userName || clientProfile.name || "Visitante Teste",
+
+      userName:
+        clientProfile.userName || clientProfile.name || "Visitante Teste",
+
       userPhone: phone || "5599999999999",
+
+      instanceName: clientProfile.instanceName || "agentechatbot",
+
+      evolutionInstance:
+        clientProfile.evolutionInstance ||
+        clientProfile.instanceName ||
+        "agentechatbot",
+
       channel: "web-widget-test",
     };
   }, [clientProfile]);
@@ -934,10 +980,13 @@ function ClientChatWidget({ webhookUrl, clientProfile = {}, title = "Atendimento
     event.preventDefault();
 
     const message = inputText.trim();
+
     if (!message || isSending) return;
 
-    if (!webhookUrl) {
-      addBotMessage("Webhook do n8n não configurado. Defina VITE_N8N_TEST_CHAT_WEBHOOK_URL no .env do front.");
+    if (!finalBackendUrl) {
+      addBotMessage(
+        "Backend do chat não configurado. Defina VITE_CHAT_WIDGET_BACKEND_URL ou VITE_API_URL no .env do front."
+      );
       return;
     }
 
@@ -950,6 +999,7 @@ function ClientChatWidget({ webhookUrl, clientProfile = {}, title = "Atendimento
         createdAt: new Date().toISOString(),
       },
     ]);
+
     setInputText("");
     setIsSending(true);
 
@@ -957,32 +1007,62 @@ function ClientChatWidget({ webhookUrl, clientProfile = {}, title = "Atendimento
       const payload = {
         channel: normalizedProfile.channel,
         source: "client-web-widget",
+
         clientId: normalizedProfile.clientId,
         clientName: normalizedProfile.clientName,
         tenantId: normalizedProfile.tenantId,
         segment: normalizedProfile.segment,
+
+        instanceName: normalizedProfile.instanceName,
+        evolutionInstance: normalizedProfile.evolutionInstance,
+        instance: normalizedProfile.instanceName,
+
         name: normalizedProfile.userName,
+        nome: normalizedProfile.userName,
         phone: normalizedProfile.userPhone,
+        number: normalizedProfile.userPhone,
         from: normalizedProfile.userPhone,
+
         remoteJid: `${normalizedProfile.userPhone}@web-widget.local`,
+
         message,
         text: message,
+        mensagem: message,
+
         messageType: "conversation",
         fromMe: false,
         timestamp: new Date().toISOString(),
+
         profile: normalizedProfile,
       };
 
-      const response = await fetch(webhookUrl, {
+      console.log("[ClientChatWidget] Enviando mensagem para backend:", {
+        finalBackendUrl,
+        payload,
+      });
+
+      const response = await fetch(finalBackendUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(payload),
       });
 
       const data = await safeReadJson(response);
 
+      console.log("[ClientChatWidget] Resposta do backend:", {
+        ok: response.ok,
+        status: response.status,
+        data,
+      });
+
       if (!response.ok) {
-        addBotMessage(data?.message || data?.error || `Erro ao chamar o n8n. Status HTTP: ${response.status}`);
+        addBotMessage(
+          data?.message ||
+          data?.error ||
+          `Erro ao chamar o backend do chat. Status HTTP: ${response.status}`
+        );
         return;
       }
 
@@ -992,12 +1072,15 @@ function ClientChatWidget({ webhookUrl, clientProfile = {}, title = "Atendimento
         data?.message ||
         data?.text ||
         data?.output ||
-        "Recebi sua mensagem, mas o n8n não retornou o campo reply.";
+        "Recebi sua mensagem, mas o backend não retornou o campo reply.";
 
       addBotMessage(String(reply));
     } catch (error) {
       console.error("[ClientChatWidget] Erro ao enviar mensagem:", error);
-      addBotMessage("Não consegui conectar ao n8n. Verifique a URL do webhook e a liberação de CORS.");
+
+      addBotMessage(
+        "Não consegui conectar ao backend do chat. Verifique se a API está publicada e se o CORS está liberado."
+      );
     } finally {
       setIsSending(false);
     }
@@ -1010,10 +1093,17 @@ function ClientChatWidget({ webhookUrl, clientProfile = {}, title = "Atendimento
           <header className="client-chat-header">
             <div>
               <strong>{title}</strong>
-              <span>{subtitle} • {normalizedProfile.clientName}</span>
+              <span>
+                {subtitle} • {normalizedProfile.clientName}
+              </span>
             </div>
 
-            <button type="button" className="client-chat-close" onClick={toggleChat} aria-label="Fechar chat">
+            <button
+              type="button"
+              className="client-chat-close"
+              onClick={toggleChat}
+              aria-label="Fechar chat"
+            >
               ×
             </button>
           </header>
@@ -1037,7 +1127,11 @@ function ClientChatWidget({ webhookUrl, clientProfile = {}, title = "Atendimento
               </div>
             ))}
 
-            {isSending && <div className="client-chat-message client-chat-message-bot client-chat-loading">Digitando...</div>}
+            {isSending && (
+              <div className="client-chat-message client-chat-message-bot client-chat-loading">
+                Digitando...
+              </div>
+            )}
           </main>
 
           <form className="client-chat-form" onSubmit={handleSubmit}>
@@ -1055,7 +1149,12 @@ function ClientChatWidget({ webhookUrl, clientProfile = {}, title = "Atendimento
         </section>
       )}
 
-      <button type="button" className="client-chat-button" onClick={toggleChat} aria-label={isOpen ? "Fechar chat" : "Abrir chat"}>
+      <button
+        type="button"
+        className="client-chat-button"
+        onClick={toggleChat}
+        aria-label={isOpen ? "Fechar chat" : "Abrir chat"}
+      >
         {isOpen ? "×" : Ic.bot}
       </button>
     </div>
@@ -2209,18 +2308,28 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [booting, setBooting] = useState(Boolean(getSavedSession()?.token));
 
+  const chatBackendUrl =
+    import.meta.env.VITE_CHAT_WIDGET_BACKEND_URL ||
+    `${String(import.meta.env.VITE_API_URL || "").replace(/\/$/, "")}/chat-widget`;
+
   async function loadDashboard() {
     if (!getSavedSession()?.token) return;
+
     setLoading(true);
+
     try {
       const data = await api.getDashboard();
       setDashboard(data);
       setEvents(data.events || []);
     } catch (error) {
-      if (String(error.message || "").includes("401") || String(error.message || "").toLowerCase().includes("sessão")) {
+      if (
+        String(error.message || "").includes("401") ||
+        String(error.message || "").toLowerCase().includes("sessão")
+      ) {
         clearSession();
         setSession(null);
       }
+
       console.error(error);
     } finally {
       setLoading(false);
@@ -2231,12 +2340,24 @@ export default function App() {
   useEffect(() => {
     async function boot() {
       const saved = getSavedSession();
+
       if (!saved?.token) return;
+
       try {
         const me = await api.me();
-        const full = { ...saved, user: me.user, company: me.company };
+
+        const full = {
+          ...saved,
+          user: me.user,
+          company: me.company,
+        };
+
         saveSession(full);
-        setSession({ user: me.user, company: me.company });
+
+        setSession({
+          user: me.user,
+          company: me.company,
+        });
       } catch (error) {
         clearSession();
         setSession(null);
@@ -2244,6 +2365,7 @@ export default function App() {
         setBooting(false);
       }
     }
+
     boot();
   }, []);
 
@@ -2259,39 +2381,95 @@ export default function App() {
     setTab("dashboard");
   }
 
-  if (!session && !booting) return <Login onLogin={setSession} />;
-  if (booting || !session) return <><style>{css}</style><LoadingPage /></>;
+  if (!session && !booting) {
+    return <Login onLogin={setSession} />;
+  }
+
+  if (booting || !session) {
+    return (
+      <>
+        <style>{css}</style>
+        <LoadingPage />
+      </>
+    );
+  }
 
   const { user, company } = session;
-  const TL = { dashboard: "Dashboard", agenda: "Agenda", whatsapp: "WhatsApp IA", parametros: "Parâmetros IA" };
-  const chatWebhookUrl = import.meta.env.VITE_N8N_TEST_CHAT_WEBHOOK_URL || "";
+
+  const TL = {
+    dashboard: "Dashboard",
+    agenda: "Agenda",
+    whatsapp: "WhatsApp IA",
+    parametros: "Parâmetros IA",
+  };
 
   return (
     <>
       <style>{css}</style>
+
       <div className="app">
-        <Sidebar user={user} company={company} tab={tab} setTab={setTab} onLogout={logout} />
+        <Sidebar
+          user={user}
+          company={company}
+          tab={tab}
+          setTab={setTab}
+          onLogout={logout}
+        />
+
         <div className="main">
           <div className="topbar">
-            <div><div className="topbar-title">{TL[tab]}</div><div className="topbar-sub">Cliente: {company.name} · Powered by {PLATFORM.name}</div></div>
-            <span className="badge badge-green"><span style={{ width: 5, height: 5, background: "var(--g600)", borderRadius: "50%", animation: "pulse 2s ease infinite" }} /> IA ativa</span>
+            <div>
+              <div className="topbar-title">{TL[tab]}</div>
+
+              <div className="topbar-sub">
+                Cliente: {company.name} · Powered by {PLATFORM.name}
+              </div>
+            </div>
+
+            <span className="badge badge-green">
+              <span
+                style={{
+                  width: 5,
+                  height: 5,
+                  background: "var(--g600)",
+                  borderRadius: "50%",
+                  animation: "pulse 2s ease infinite",
+                }}
+              />{" "}
+              IA ativa
+            </span>
           </div>
-          {tab === "dashboard" && <Dashboard company={company} dashboard={dashboard} loading={loading} />}
-          {tab === "agenda" && <Agenda company={company} events={events} setEvents={setEvents} refreshDashboard={loadDashboard} />}
+
+          {tab === "dashboard" && (
+            <Dashboard
+              company={company}
+              dashboard={dashboard}
+              loading={loading}
+            />
+          )}
+
+          {tab === "agenda" && (
+            <Agenda
+              company={company}
+              events={events}
+              setEvents={setEvents}
+              refreshDashboard={loadDashboard}
+            />
+          )}
+
           {tab === "whatsapp" && <WhatsApp dashboard={dashboard} />}
+
           {tab === "parametros" && <AiParams company={company} />}
         </div>
       </div>
 
       <ClientChatWidget
-        // webhookUrl="https://agente-de-ia-n8n.yph90z.easypanel.host/webhook/teste-chat"
+        backendUrl={chatBackendUrl}
         clientProfile={{
           clientId: company?.id || "a95ec1d1-f8a8-4f50-8956-46ae42388422",
           clientName: company?.name || "Danona Gourmet",
           tenantId: company?.id || "a95ec1d1-f8a8-4f50-8956-46ae42388422",
 
-          // IMPORTANTE:
-          // precisa ser igual ao settings.instance_name / settings.evolution_instance do banco
           instanceName: "agentechatbot",
           evolutionInstance: "agentechatbot",
 
