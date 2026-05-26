@@ -7,137 +7,59 @@ import "./ClientChatWidget.css";
  * Fluxo correto:
  * ClientChatWidget -> Backend /api/chat-widget -> n8n -> Backend -> ClientChatWidget
  *
- * Variáveis aceitas no front:
- * VITE_CHAT_WIDGET_BACKEND_URL=https://mbtech-back-back.yph90z.easypanel.host/api/chat-widget
- *
- * ou, usando a API base:
+ * Variáveis recomendadas no front:
  * VITE_API_URL=https://mbtech-back-back.yph90z.easypanel.host/api
+ * VITE_CHAT_WIDGET_BACKEND_URL=https://mbtech-back-back.yph90z.easypanel.host/api/chat-widget
  */
 export default function ClientChatWidget({
   webhookUrl,
+  backendUrl,
   clientProfile = {},
   title = "Atendimento IA",
-  subtitle = "Teste IA n8n",
+  subtitle = "Teste do assistente",
 }) {
-  const backendChatUrl = buildBackendChatUrl(webhookUrl);
-
   const [isOpen, setIsOpen] = useState(false);
-  const [hasStartedChat, setHasStartedChat] = useState(false);
-
-  const [visitorForm, setVisitorForm] = useState(() => ({
-    name: clientProfile.userName || "",
-    phone: onlyNumbers(clientProfile.userPhone) || "",
-    email: clientProfile.userEmail || "",
-    scenario: clientProfile.segment || "Agenda - Eventos",
-    notes: "",
-  }));
-
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => [
+    {
+      id: cryptoRandomId(),
+      role: "bot",
+      text: `Olá! Eu sou o ${clientProfile.assistantName || "assistente virtual"}. Como posso ajudar?`,
+      createdAt: new Date().toISOString(),
+    },
+  ]);
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [formError, setFormError] = useState("");
-
   const inputRef = useRef(null);
 
   const normalizedProfile = useMemo(() => {
-    const visitorName = String(visitorForm.name || clientProfile.userName || "Visitante Teste").trim();
-    const visitorPhone = onlyNumbers(visitorForm.phone || clientProfile.userPhone || "5599999999999");
-    const visitorEmail = String(visitorForm.email || clientProfile.userEmail || "").trim();
-    const scenario = String(visitorForm.scenario || clientProfile.segment || "Agenda - Eventos").trim();
-    const notes = String(visitorForm.notes || "").trim();
-
     return {
       clientId: clientProfile.clientId || "a95ec1d1-f8a8-4f50-8956-46ae42388422",
       clientName: clientProfile.clientName || "Danona Gourmet",
-      tenantId:
-        clientProfile.tenantId ||
-        clientProfile.clientId ||
-        "a95ec1d1-f8a8-4f50-8956-46ae42388422",
-
-      instanceName:
-        clientProfile.instanceName ||
-        clientProfile.evolutionInstance ||
-        "agentechatbot",
-
-      evolutionInstance:
-        clientProfile.evolutionInstance ||
-        clientProfile.instanceName ||
-        "agentechatbot",
-
-      segment: scenario,
+      tenantId: clientProfile.tenantId || "a95ec1d1-f8a8-4f50-8956-46ae42388422",
+      segment: clientProfile.segment || "Agenda - Eventos",
       assistantName: clientProfile.assistantName || "Assistente IA",
-      userName: visitorName,
-      userPhone: visitorPhone,
-      userEmail: visitorEmail,
-      testScenario: scenario,
-      testNotes: notes,
+      userName: clientProfile.userName || "Visitante Teste",
+      userPhone: onlyNumbers(clientProfile.userPhone) || "5599999999999",
       channel: "web-widget-test",
     };
-  }, [clientProfile, visitorForm]);
+  }, [clientProfile]);
+
+  const finalBackendUrl = useMemo(() => {
+    return buildBackendChatUrl({ backendUrl, webhookUrl });
+  }, [backendUrl, webhookUrl]);
 
   function toggleChat() {
     setIsOpen((current) => {
       const next = !current;
 
       setTimeout(() => {
-        if (next && hasStartedChat && inputRef.current) {
+        if (next && inputRef.current) {
           inputRef.current.focus();
         }
       }, 100);
 
       return next;
     });
-  }
-
-  function updateVisitorField(field, value) {
-    setVisitorForm((current) => ({
-      ...current,
-      [field]: field === "phone" ? onlyNumbers(value) : value,
-    }));
-
-    if (formError) {
-      setFormError("");
-    }
-  }
-
-  function handleStartChat(event) {
-    event.preventDefault();
-
-    const name = String(visitorForm.name || "").trim();
-    const phone = onlyNumbers(visitorForm.phone || "");
-
-    if (!name) {
-      setFormError("Informe o nome para iniciar o teste.");
-      return;
-    }
-
-    if (!phone) {
-      setFormError("Informe o telefone para iniciar o teste.");
-      return;
-    }
-
-    const welcomeMessage = {
-      id: cryptoRandomId(),
-      role: "bot",
-      text: `Olá, ${name}! Eu sou o ${normalizedProfile.assistantName}. Como posso ajudar?`,
-      createdAt: new Date().toISOString(),
-    };
-
-    setMessages([welcomeMessage]);
-    setHasStartedChat(true);
-
-    setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    }, 120);
-  }
-
-  function handleResetVisitor() {
-    setHasStartedChat(false);
-    setMessages([]);
-    setInputText("");
-    setFormError("");
   }
 
   async function handleSubmit(event) {
@@ -149,25 +71,10 @@ export default function ClientChatWidget({
       return;
     }
 
-    console.log("[ClientChatWidget] Configuração inicial:", {
-      webhookUrl,
-      envChatBackendUrl: import.meta.env.VITE_CHAT_WIDGET_BACKEND_URL,
-      envApiUrl: import.meta.env.VITE_API_URL,
-      backendChatUrl,
-      normalizedProfile,
-    });
-
-    if (!backendChatUrl) {
+    if (!finalBackendUrl) {
       addBotMessage(
-        "Backend do chat não configurado. Defina VITE_CHAT_WIDGET_BACKEND_URL ou VITE_API_URL no .env do front."
+        "URL do backend do chat não configurada. Configure VITE_CHAT_WIDGET_BACKEND_URL ou VITE_API_URL."
       );
-
-      console.warn("[ClientChatWidget] URL do backend vazia:", {
-        webhookUrl,
-        envChatBackendUrl: import.meta.env.VITE_CHAT_WIDGET_BACKEND_URL,
-        envApiUrl: import.meta.env.VITE_API_URL,
-      });
-
       return;
     }
 
@@ -183,101 +90,31 @@ export default function ClientChatWidget({
     setIsSending(true);
 
     try {
-      const remoteJid = `${normalizedProfile.userPhone}@s.whatsapp.net`;
-      const fakeMessageId = `widget-${Date.now()}`;
-      const nowIso = new Date().toISOString();
-
       const payload = {
-        _testMode: true,
-        _channel: "web-widget-test",
-        _source: "client-web-widget",
-
-        channel: "web-widget-test",
+        channel: normalizedProfile.channel,
         source: "client-web-widget",
         clientId: normalizedProfile.clientId,
         clientName: normalizedProfile.clientName,
         tenantId: normalizedProfile.tenantId,
         segment: normalizedProfile.segment,
-
-        instance: normalizedProfile.instanceName,
-        instanceName: normalizedProfile.instanceName,
-        evolutionInstance: normalizedProfile.evolutionInstance,
-
         name: normalizedProfile.userName,
-        nome: normalizedProfile.userName,
-        email: normalizedProfile.userEmail,
         phone: normalizedProfile.userPhone,
-        number: normalizedProfile.userPhone,
         from: normalizedProfile.userPhone,
-        contato: remoteJid,
-        remoteJid,
-        remoteJidAlt: remoteJid,
-
-        testScenario: normalizedProfile.testScenario,
-        testNotes: normalizedProfile.testNotes,
-        scenario: normalizedProfile.testScenario,
-        observacoesTeste: normalizedProfile.testNotes,
-
+        remoteJid: `${normalizedProfile.userPhone}@web-widget.local`,
         message,
         text: message,
-        mensagem: message,
-        conversation: message,
-
         messageType: "conversation",
         fromMe: false,
-        isFromMe: false,
-        isGroup: false,
-        isStatus: false,
-        isBroadcast: false,
-        isAudio: false,
-        hasBinaryAudio: false,
-        binaryFieldName: "",
-        isValidMessage: true,
-
-        timestamp: nowIso,
-
-        event: {
-          event: "messages.upsert",
-          instance: normalizedProfile.instanceName,
-          server_url: "web-widget-test",
-          apikey: "web-widget-test",
-
-          Info: {
-            Id: fakeMessageId,
-            RemoteJid: remoteJid,
-            RemoteJidAlt: remoteJid,
-            Sender: remoteJid,
-            PushName: normalizedProfile.userName,
-            FromMe: false,
-            IsGroup: false,
-            IsBroadcast: false,
-            IsStatus: false,
-            Type: "conversation",
-            MessageTimestamp: Math.floor(Date.now() / 1000),
-          },
-
-          Message: {
-            conversation: message,
-          },
-        },
-
-        visitor: {
-          name: normalizedProfile.userName,
-          phone: normalizedProfile.userPhone,
-          email: normalizedProfile.userEmail,
-          scenario: normalizedProfile.testScenario,
-          notes: normalizedProfile.testNotes,
-        },
-
+        timestamp: new Date().toISOString(),
         profile: normalizedProfile,
       };
 
-      console.log("[ClientChatWidget] Enviando payload para o backend:", {
-        backendChatUrl,
+      console.log("[ClientChatWidget] Enviando mensagem para backend:", {
+        finalBackendUrl,
         payload,
       });
 
-      const response = await fetch(backendChatUrl, {
+      const response = await fetch(finalBackendUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -288,8 +125,8 @@ export default function ClientChatWidget({
       const data = await safeReadJson(response);
 
       console.log("[ClientChatWidget] Resposta do backend:", {
-        status: response.status,
         ok: response.ok,
+        status: response.status,
         data,
       });
 
@@ -300,28 +137,27 @@ export default function ClientChatWidget({
           `Erro ao chamar o backend do chat. Status HTTP: ${response.status}`;
 
         addBotMessage(errorMessage);
-
-        console.error("[ClientChatWidget] Erro HTTP backend:", {
-          status: response.status,
-          data,
-        });
-
         return;
       }
 
-      const reply = extractReply(data);
+      const reply =
+        data?.reply ||
+        data?.response ||
+        data?.message ||
+        data?.text ||
+        data?.output ||
+        data?.n8n?.reply ||
+        data?.n8n?.response ||
+        data?.n8n?.message ||
+        "Recebi sua mensagem, mas o backend não retornou um campo de resposta reconhecido.";
 
       addBotMessage(String(reply));
     } catch (error) {
-      console.error("[ClientChatWidget] Erro completo ao chamar backend:", {
-        error,
-        message: error?.message,
-        backendChatUrl,
-      });
-
       addBotMessage(
-        "Não consegui conectar ao backend do chat. Verifique se a URL /api/chat-widget está correta e se o backend está publicado."
+        "Não consegui conectar ao backend do chat. Verifique se a URL /api/chat-widget está publicada e se o CORS do backend está liberado."
       );
+
+      console.error("[ClientChatWidget] Erro ao enviar mensagem:", error);
     } finally {
       setIsSending(false);
     }
@@ -341,10 +177,7 @@ export default function ClientChatWidget({
   return (
     <div className="client-chat-widget">
       {isOpen && (
-        <section
-          className="client-chat-window"
-          aria-label="Chat de teste com IA"
-        >
+        <section className="client-chat-window" aria-label="Chat de teste com IA">
           <header className="client-chat-header">
             <div>
               <strong>{title}</strong>
@@ -368,105 +201,40 @@ export default function ClientChatWidget({
             <strong>{normalizedProfile.segment}</strong>
           </div>
 
-          {!hasStartedChat ? (
-            <form className="client-chat-start-form" onSubmit={handleStartChat}>
-              <label>
-                Nome
-                <input
-                  value={visitorForm.name}
-                  onChange={(event) => updateVisitorField("name", event.target.value)}
-                  placeholder="Seu nome"
-                />
-              </label>
-
-              <label>
-                Telefone
-                <input
-                  value={visitorForm.phone}
-                  onChange={(event) => updateVisitorField("phone", event.target.value)}
-                  placeholder="5599999999999"
-                />
-              </label>
-
-              <label>
-                E-mail
-                <input
-                  value={visitorForm.email}
-                  onChange={(event) => updateVisitorField("email", event.target.value)}
-                  placeholder="email@exemplo.com"
-                />
-              </label>
-
-              <label>
-                Cenário de teste
-                <input
-                  value={visitorForm.scenario}
-                  onChange={(event) => updateVisitorField("scenario", event.target.value)}
-                  placeholder="Agenda - Eventos"
-                />
-              </label>
-
-              <label>
-                Observações
-                <textarea
-                  value={visitorForm.notes}
-                  onChange={(event) => updateVisitorField("notes", event.target.value)}
-                  placeholder="Ex.: testar orçamento de festa para 60 pessoas"
-                  rows={3}
-                />
-              </label>
-
-              {formError && <div className="client-chat-form-error">{formError}</div>}
-
-              <button type="submit">Iniciar conversa</button>
-            </form>
-          ) : (
-            <>
-              <main className="client-chat-messages">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={
-                      message.role === "user"
-                        ? "client-chat-message client-chat-message-user"
-                        : "client-chat-message client-chat-message-bot"
-                    }
-                  >
-                    {message.text}
-                  </div>
-                ))}
-
-                {isSending && (
-                  <div className="client-chat-message client-chat-message-bot client-chat-loading">
-                    Digitando...
-                  </div>
-                )}
-              </main>
-
-              <form className="client-chat-form" onSubmit={handleSubmit}>
-                <input
-                  ref={inputRef}
-                  value={inputText}
-                  onChange={(event) => setInputText(event.target.value)}
-                  placeholder="Digite sua mensagem..."
-                  disabled={isSending}
-                />
-
-                <button type="submit" disabled={isSending || !inputText.trim()}>
-                  Enviar
-                </button>
-              </form>
-
-              <button
-                type="button"
-                className="client-chat-reset"
-                onClick={handleResetVisitor}
-                disabled={isSending}
+          <main className="client-chat-messages">
+            {messages.map((messageItem) => (
+              <div
+                key={messageItem.id}
+                className={
+                  messageItem.role === "user"
+                    ? "client-chat-message client-chat-message-user"
+                    : "client-chat-message client-chat-message-bot"
+                }
               >
-                Trocar perfil de teste
-              </button>
-            </>
-          )}
+                {messageItem.text}
+              </div>
+            ))}
+
+            {isSending && (
+              <div className="client-chat-message client-chat-message-bot client-chat-loading">
+                Digitando...
+              </div>
+            )}
+          </main>
+
+          <form className="client-chat-form" onSubmit={handleSubmit}>
+            <input
+              ref={inputRef}
+              value={inputText}
+              onChange={(event) => setInputText(event.target.value)}
+              placeholder="Digite sua mensagem..."
+              disabled={isSending}
+            />
+
+            <button type="submit" disabled={isSending || !inputText.trim()}>
+              Enviar
+            </button>
+          </form>
         </section>
       )}
 
@@ -482,37 +250,28 @@ export default function ClientChatWidget({
   );
 }
 
-function buildBackendChatUrl(webhookUrl) {
-  if (webhookUrl) return webhookUrl;
+function buildBackendChatUrl({ backendUrl, webhookUrl }) {
+  if (backendUrl) {
+    return String(backendUrl).trim();
+  }
 
-  const directBackendUrl = import.meta.env.VITE_CHAT_WIDGET_BACKEND_URL;
-  if (directBackendUrl) return directBackendUrl;
+  const envBackendUrl = import.meta.env.VITE_CHAT_WIDGET_BACKEND_URL;
+  if (envBackendUrl) {
+    return String(envBackendUrl).trim();
+  }
 
   const apiUrl = import.meta.env.VITE_API_URL;
   if (apiUrl) {
     return `${String(apiUrl).replace(/\/$/, "")}/chat-widget`;
   }
 
-  // Mantido apenas como fallback temporário para não quebrar ambientes antigos.
-  // O ideal agora é chamar o backend, não o n8n direto.
-  return import.meta.env.VITE_N8N_TEST_CHAT_WEBHOOK_URL || "";
-}
+  // Compatibilidade temporária: se alguém ainda passar webhookUrl,
+  // só usa se não for URL direta do n8n. Isso evita CORS chamando o n8n do navegador.
+  if (webhookUrl && !String(webhookUrl).includes("/webhook/")) {
+    return String(webhookUrl).trim();
+  }
 
-function extractReply(data) {
-  const reply =
-    data?.reply ||
-    data?.response ||
-    data?.message ||
-    data?.text ||
-    data?.output ||
-    data?.resposta ||
-    data?.responseText ||
-    data?.n8n?.reply ||
-    data?.n8n?.response ||
-    data?.n8n?.message ||
-    "Recebi sua mensagem, mas o backend não retornou um campo de resposta reconhecido.";
-
-  return reply;
+  return "";
 }
 
 function ChatIcon() {
