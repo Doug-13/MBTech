@@ -896,10 +896,10 @@ function ClientChatWidget({ webhookUrl, clientProfile = {}, title = "Atendimento
   const normalizedProfile = useMemo(() => {
     const phone = onlyNumbers(
       clientProfile.userPhone ||
-        clientProfile.phone ||
-        clientProfile.whatsapp ||
-        clientProfile.customer_phone ||
-        "5599999999999"
+      clientProfile.phone ||
+      clientProfile.whatsapp ||
+      clientProfile.customer_phone ||
+      "5599999999999"
     );
 
     return {
@@ -2284,19 +2284,15 @@ export default function App() {
       </div>
 
       <ClientChatWidget
-        webhookUrl={chatWebhookUrl}
-        title="Atendimento IA"
-        subtitle="Teste via n8n"
+        webhookUrl="https://agente-de-ia-n8n.yph90z.easypanel.host/webhook-test/teste-chat"
         clientProfile={{
-          clientId: company?.id,
-          companyId: company?.id,
-          clientName: company?.name,
-          companyName: company?.name,
-          tenantId: company?.id,
-          segment: company?.segment || company?.business_segment || "agenda-eventos",
-          assistantName: `Assistente ${company?.name || PLATFORM.name}`,
-          userName: user?.name,
-          userPhone: user?.phone || company?.phone || "5599999999999",
+          clientId: company?.id || "cliente-teste",
+          clientName: company?.name || "Cliente Teste",
+          tenantId: company?.id || "tenant-teste",
+          segment: company?.segment || "eventos",
+          assistantName: `Assistente ${company?.name || "IA"}`,
+          userName: user?.name || "Visitante Teste",
+          userPhone: user?.phone || "5599999999999",
         }}
       />
     </>
