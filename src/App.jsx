@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, getSavedSession, saveSession, clearSession } from "./services/api";
 import AdminApp from "./AdminApp";
+import "./components/ClientChatWidget/ClientChatWidget.css";
 
 const PLATFORM = {
   name: "MB Tech",
