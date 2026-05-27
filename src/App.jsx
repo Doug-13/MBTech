@@ -887,19 +887,20 @@ function ClientChatWidget({
   subtitle = "Teste do assistente",
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [hasStartedChat, setHasStartedChat] = useState(false);
 
-  const [messages, setMessages] = useState(() => [
-    {
-      id: makeChatId(),
-      role: "bot",
-      text: `Olá! Eu sou o ${clientProfile.assistantName || "assistente virtual"
-        }. Como posso ajudar?`,
-      createdAt: new Date().toISOString(),
-    },
-  ]);
+  const [visitorForm, setVisitorForm] = useState(() => ({
+    name: "",
+    phone: "",
+    email: "",
+    scenario: clientProfile.segment || "Agenda - Eventos",
+    notes: "",
+  }));
 
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const finalBackendUrl = useMemo(() => {
     if (backendUrl) return backendUrl;
@@ -920,13 +921,8 @@ function ClientChatWidget({
   }, [backendUrl]);
 
   const normalizedProfile = useMemo(() => {
-    const phone = onlyNumbers(
-      clientProfile.userPhone ||
-      clientProfile.phone ||
-      clientProfile.whatsapp ||
-      clientProfile.customer_phone ||
-      "5599999999999"
-    );
+    const visitorName = String(visitorForm.name || "").trim();
+    const visitorPhone = onlyNumbers(visitorForm.phone || "");
 
     return {
       clientId:
@@ -940,14 +936,15 @@ function ClientChatWidget({
       tenantId:
         clientProfile.tenantId || clientProfile.companyId || "tenant-teste",
 
-      segment: clientProfile.segment || "agenda-eventos",
+      segment: visitorForm.scenario || clientProfile.segment || "Agenda - Eventos",
 
       assistantName: clientProfile.assistantName || "Assistente IA",
 
-      userName:
-        clientProfile.userName || clientProfile.name || "Visitante Teste",
-
-      userPhone: phone || "5599999999999",
+      userName: visitorName,
+      userPhone: visitorPhone,
+      userEmail: String(visitorForm.email || "").trim(),
+      testScenario: visitorForm.scenario || "Agenda - Eventos",
+      testNotes: String(visitorForm.notes || "").trim(),
 
       instanceName: clientProfile.instanceName || "agentechatbot",
 
@@ -958,10 +955,70 @@ function ClientChatWidget({
 
       channel: "web-widget-test",
     };
-  }, [clientProfile]);
+  }, [clientProfile, visitorForm]);
 
   function toggleChat() {
     setIsOpen((current) => !current);
+  }
+
+  function updateVisitorField(field, value) {
+    setVisitorForm((current) => ({
+      ...current,
+      [field]: field === "phone" ? onlyNumbers(value) : value,
+    }));
+
+    if (formError) {
+      setFormError("");
+    }
+  }
+
+  function handleStartChat(event) {
+    event.preventDefault();
+
+    const name = String(visitorForm.name || "").trim();
+    const phone = onlyNumbers(visitorForm.phone || "");
+
+    if (!name) {
+      setFormError("Informe o nome para iniciar o atendimento.");
+      return;
+    }
+
+    if (!phone) {
+      setFormError("Informe o telefone para iniciar o atendimento.");
+      return;
+    }
+
+    if (phone.length < 10) {
+      setFormError("Informe um telefone válido com DDD.");
+      return;
+    }
+
+    setMessages([
+      {
+        id: makeChatId(),
+        role: "bot",
+        text: `Olá, ${name}! Eu sou o ${clientProfile.assistantName || "Assistente IA"
+          }. Como posso ajudar?`,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+
+    setHasStartedChat(true);
+  }
+
+  function handleResetVisitor() {
+    setHasStartedChat(false);
+    setMessages([]);
+    setInputText("");
+    setFormError("");
+
+    setVisitorForm((current) => ({
+      ...current,
+      name: "",
+      phone: "",
+      email: "",
+      notes: "",
+    }));
   }
 
   function addBotMessage(text) {
@@ -982,6 +1039,11 @@ function ClientChatWidget({
     const message = inputText.trim();
 
     if (!message || isSending) return;
+
+    if (!hasStartedChat) {
+      setFormError("Preencha seus dados antes de iniciar a conversa.");
+      return;
+    }
 
     if (!finalBackendUrl) {
       addBotMessage(
@@ -1005,6 +1067,10 @@ function ClientChatWidget({
 
     try {
       const payload = {
+        _testMode: true,
+        _channel: "web-widget-test",
+        _source: "client-web-widget",
+
         channel: normalizedProfile.channel,
         source: "client-web-widget",
 
@@ -1019,21 +1085,52 @@ function ClientChatWidget({
 
         name: normalizedProfile.userName,
         nome: normalizedProfile.userName,
+        customerName: normalizedProfile.userName,
+        pushName: normalizedProfile.userName,
+
         phone: normalizedProfile.userPhone,
         number: normalizedProfile.userPhone,
         from: normalizedProfile.userPhone,
+        customerPhone: normalizedProfile.userPhone,
+
+        email: normalizedProfile.userEmail,
+        customerEmail: normalizedProfile.userEmail,
 
         remoteJid: `${normalizedProfile.userPhone}@web-widget.local`,
+        contato: `${normalizedProfile.userPhone}@web-widget.local`,
 
         message,
         text: message,
         mensagem: message,
+        conversation: message,
+
+        testScenario: normalizedProfile.testScenario,
+        scenario: normalizedProfile.testScenario,
+        testNotes: normalizedProfile.testNotes,
+        observacoesTeste: normalizedProfile.testNotes,
 
         messageType: "conversation",
         fromMe: false,
+        isFromMe: false,
+        isGroup: false,
+        isStatus: false,
+        isBroadcast: false,
         timestamp: new Date().toISOString(),
 
-        profile: normalizedProfile,
+        visitor: {
+          name: normalizedProfile.userName,
+          phone: normalizedProfile.userPhone,
+          email: normalizedProfile.userEmail,
+          scenario: normalizedProfile.testScenario,
+          notes: normalizedProfile.testNotes,
+        },
+
+        profile: {
+          ...normalizedProfile,
+          name: normalizedProfile.userName,
+          phone: normalizedProfile.userPhone,
+          email: normalizedProfile.userEmail,
+        },
       };
 
       console.log("[ClientChatWidget] Enviando mensagem para backend:", {
@@ -1072,6 +1169,9 @@ function ClientChatWidget({
         data?.message ||
         data?.text ||
         data?.output ||
+        data?.n8n?.reply ||
+        data?.n8n?.response ||
+        data?.n8n?.message ||
         "Recebi sua mensagem, mas o backend não retornou o campo reply.";
 
       addBotMessage(String(reply));
@@ -1113,39 +1213,140 @@ function ClientChatWidget({
             <strong>{normalizedProfile.segment}</strong>
           </div>
 
-          <main className="client-chat-messages">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={
-                  message.role === "user"
-                    ? "client-chat-message client-chat-message-user"
-                    : "client-chat-message client-chat-message-bot"
-                }
-              >
-                {message.text}
+          {!hasStartedChat ? (
+            <form className="client-chat-start-form" onSubmit={handleStartChat}>
+              <div className="client-chat-start-title">
+                Antes de começar
               </div>
-            ))}
 
-            {isSending && (
-              <div className="client-chat-message client-chat-message-bot client-chat-loading">
-                Digitando...
+              <p className="client-chat-start-description">
+                Informe seus dados para que a IA consiga manter o contexto do
+                atendimento.
+              </p>
+
+              {formError && (
+                <div className="client-chat-form-error">{formError}</div>
+              )}
+
+              <label className="client-chat-field">
+                <span>Nome *</span>
+                <input
+                  value={visitorForm.name}
+                  onChange={(event) =>
+                    updateVisitorField("name", event.target.value)
+                  }
+                  placeholder="Ex.: Douglas Mello"
+                />
+              </label>
+
+              <label className="client-chat-field">
+                <span>Telefone com DDD *</span>
+                <input
+                  value={visitorForm.phone}
+                  onChange={(event) =>
+                    updateVisitorField("phone", event.target.value)
+                  }
+                  placeholder="Ex.: 51999999999"
+                  inputMode="numeric"
+                />
+              </label>
+
+              <label className="client-chat-field">
+                <span>E-mail</span>
+                <input
+                  value={visitorForm.email}
+                  onChange={(event) =>
+                    updateVisitorField("email", event.target.value)
+                  }
+                  placeholder="Ex.: cliente@email.com"
+                  type="email"
+                />
+              </label>
+
+              <label className="client-chat-field">
+                <span>O que você procura?</span>
+                <select
+                  value={visitorForm.scenario}
+                  onChange={(event) =>
+                    updateVisitorField("scenario", event.target.value)
+                  }
+                >
+                  <option value="Agenda - Eventos">Agenda - Eventos</option>
+                  <option value="Orçamento">Orçamento</option>
+                  <option value="Dúvidas sobre serviços">
+                    Dúvidas sobre serviços
+                  </option>
+                  <option value="Contrato">Contrato</option>
+                  <option value="Suporte">Suporte</option>
+                  <option value="Financeiro">Financeiro</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </label>
+
+              <label className="client-chat-field">
+                <span>Observações</span>
+                <textarea
+                  value={visitorForm.notes}
+                  onChange={(event) =>
+                    updateVisitorField("notes", event.target.value)
+                  }
+                  placeholder="Ex.: Quero orçamento para uma festa de 15 anos com 60 pessoas."
+                  rows={3}
+                />
+              </label>
+
+              <button type="submit" className="client-chat-start-button">
+                Iniciar conversa
+              </button>
+            </form>
+          ) : (
+            <>
+              <div className="client-chat-visitor-bar">
+                <div>
+                  <strong>{normalizedProfile.userName}</strong>
+                  <span>{formatPhone(normalizedProfile.userPhone)}</span>
+                </div>
+
+                <button type="button" onClick={handleResetVisitor}>
+                  Trocar dados
+                </button>
               </div>
-            )}
-          </main>
 
-          <form className="client-chat-form" onSubmit={handleSubmit}>
-            <input
-              value={inputText}
-              onChange={(event) => setInputText(event.target.value)}
-              placeholder="Digite sua mensagem..."
-              disabled={isSending}
-            />
+              <main className="client-chat-messages">
+                {messages.map((messageItem) => (
+                  <div
+                    key={messageItem.id}
+                    className={
+                      messageItem.role === "user"
+                        ? "client-chat-message client-chat-message-user"
+                        : "client-chat-message client-chat-message-bot"
+                    }
+                  >
+                    {messageItem.text}
+                  </div>
+                ))}
 
-            <button type="submit" disabled={isSending || !inputText.trim()}>
-              Enviar
-            </button>
-          </form>
+                {isSending && (
+                  <div className="client-chat-message client-chat-message-bot client-chat-loading">
+                    Digitando...
+                  </div>
+                )}
+              </main>
+
+              <form className="client-chat-form" onSubmit={handleSubmit}>
+                <input
+                  value={inputText}
+                  onChange={(event) => setInputText(event.target.value)}
+                  placeholder="Digite sua mensagem..."
+                  disabled={isSending}
+                />
+
+                <button type="submit" disabled={isSending || !inputText.trim()}>
+                  Enviar
+                </button>
+              </form>
+            </>
+          )}
         </section>
       )}
 

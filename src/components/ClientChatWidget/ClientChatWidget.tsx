@@ -1,209 +1,182 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import "./ClientChatWidget.css";
 
-type ClientProfile = {
-  clientId?: string;
-  clientName?: string;
-  tenantId?: string;
-  companyId?: string;
-  companyName?: string;
-  segment?: string;
-  assistantName?: string;
-  instanceName?: string;
-  evolutionInstance?: string;
-  displayPhoneNumber?: string;
-  businessPhone?: string;
-};
-
-type VisitorProfile = {
-  name: string;
-  phone: string;
-  email: string;
-  notes: string;
-};
-
-type ChatMessage = {
-  id: string;
-  role: "bot" | "user";
-  text: string;
-  createdAt: string;
-};
-
-type ClientChatWidgetProps = {
-  backendUrl?: string;
-  clientProfile?: ClientProfile;
-  title?: string;
-  subtitle?: string;
-};
-
-const DEFAULT_BACKEND_URL =
-  "https://mbtech-back-back.yph90z.easypanel.host/api/chat-widget";
+/**
+ * Widget flutuante para atendimento IA via backend.
+ *
+ * Fluxo:
+ * 1. Usuário abre o chat.
+ * 2. Antes de conversar, informa nome, telefone, e-mail e contexto.
+ * 3. O componente envia as mensagens para o backend:
+ *    https://mbtech-back-back.yph90z.easypanel.host/api/chat-widget
+ * 4. O backend chama o webhook do n8n.
+ *
+ * Exemplo de uso:
+ *
+ * <ClientChatWidget
+ *   backendUrl="https://mbtech-back-back.yph90z.easypanel.host/api/chat-widget"
+ *   clientProfile={{
+ *     clientId: company?.id || "a95ec1d1-f8a8-4f50-8956-46ae42388422",
+ *     clientName: company?.name || "Danona Gourmet",
+ *     tenantId: company?.id || "a95ec1d1-f8a8-4f50-8956-46ae42388422",
+ *     instanceName: "agentechatbot",
+ *     evolutionInstance: "agentechatbot",
+ *     segment: "Agenda - Eventos",
+ *     assistantName: `Assistente ${company?.name || "Danona Gourmet"}`,
+ *   }}
+ * />
+ */
 
 export default function ClientChatWidget({
   backendUrl,
   clientProfile = {},
   title = "Atendimento IA",
   subtitle = "Teste do assistente",
-}: ClientChatWidgetProps) {
+}) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isIdentified, setIsIdentified] = useState(false);
+  const [hasStartedChat, setHasStartedChat] = useState(false);
 
-  const [visitor, setVisitor] = useState<VisitorProfile>(() => ({
+  const [visitorForm, setVisitorForm] = useState(() => ({
     name: "",
     phone: "",
     email: "",
+    scenario: clientProfile.segment || "Agenda - Eventos",
     notes: "",
   }));
 
-  const [visitorForm, setVisitorForm] = useState<VisitorProfile>(() => ({
-    name: "",
-    phone: "",
-    email: "",
-    notes: "",
-  }));
-
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [
-    {
-      id: cryptoRandomId(),
-      role: "bot",
-      text: "Olá! Para iniciar o atendimento, informe seu nome e telefone.",
-      createdAt: new Date().toISOString(),
-    },
-  ]);
-
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [formError, setFormError] = useState("");
-
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const nameRef = useRef<HTMLInputElement | null>(null);
 
   const finalBackendUrl = useMemo(() => {
     if (backendUrl) return backendUrl;
 
     const directBackendUrl = import.meta.env.VITE_CHAT_WIDGET_BACKEND_URL;
-    if (directBackendUrl) return directBackendUrl;
+
+    if (directBackendUrl) {
+      return directBackendUrl;
+    }
 
     const apiUrl = import.meta.env.VITE_API_URL;
-    if (apiUrl) return `${String(apiUrl).replace(/\/$/, "")}/chat-widget`;
 
-    return DEFAULT_BACKEND_URL;
+    if (apiUrl) {
+      return `${String(apiUrl).replace(/\/$/, "")}/chat-widget`;
+    }
+
+    return "";
   }, [backendUrl]);
 
   const normalizedProfile = useMemo(() => {
+    const visitorName = String(visitorForm.name || "").trim();
+    const visitorPhone = onlyNumbers(visitorForm.phone || "");
+
     return {
       clientId:
-        clientProfile.clientId ||
-        clientProfile.companyId ||
-        "a95ec1d1-f8a8-4f50-8956-46ae42388422",
+        clientProfile.clientId || clientProfile.companyId || "cliente-teste",
+
       clientName:
         clientProfile.clientName ||
         clientProfile.companyName ||
-        "Danona Gourmet",
+        "Cliente Teste",
+
       tenantId:
-        clientProfile.tenantId ||
-        clientProfile.companyId ||
-        clientProfile.clientId ||
-        "a95ec1d1-f8a8-4f50-8956-46ae42388422",
-      segment: clientProfile.segment || "Agenda - Eventos",
+        clientProfile.tenantId || clientProfile.companyId || "tenant-teste",
+
+      segment:
+        visitorForm.scenario ||
+        clientProfile.segment ||
+        "Agenda - Eventos",
+
       assistantName: clientProfile.assistantName || "Assistente IA",
+
+      userName: visitorName,
+      userPhone: visitorPhone,
+      userEmail: String(visitorForm.email || "").trim(),
+      testScenario: visitorForm.scenario || "Agenda - Eventos",
+      testNotes: String(visitorForm.notes || "").trim(),
+
       instanceName: clientProfile.instanceName || "agentechatbot",
+
       evolutionInstance:
         clientProfile.evolutionInstance ||
         clientProfile.instanceName ||
         "agentechatbot",
-      displayPhoneNumber:
-        onlyNumbers(clientProfile.displayPhoneNumber) ||
-        onlyNumbers(clientProfile.businessPhone) ||
-        "555192883720",
+
       channel: "web-widget-test",
     };
-  }, [clientProfile]);
+  }, [clientProfile, visitorForm]);
 
   function toggleChat() {
-    setIsOpen((current) => {
-      const next = !current;
-
-      setTimeout(() => {
-        if (!next) return;
-        if (!isIdentified && nameRef.current) nameRef.current.focus();
-        if (isIdentified && inputRef.current) inputRef.current.focus();
-      }, 100);
-
-      return next;
-    });
+    setIsOpen((current) => !current);
   }
 
-  function updateVisitorForm(field: keyof VisitorProfile, value: string) {
+  function updateVisitorField(field, value) {
     setVisitorForm((current) => ({
       ...current,
-      [field]: value,
+      [field]: field === "phone" ? onlyNumbers(value) : value,
     }));
+
+    if (formError) {
+      setFormError("");
+    }
   }
 
-  function handleIdentificationSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleStartChat(event) {
     event.preventDefault();
 
-    const name = visitorForm.name.trim();
-    const phone = onlyNumbers(visitorForm.phone);
-    const email = visitorForm.email.trim();
-    const notes = visitorForm.notes.trim();
+    const name = String(visitorForm.name || "").trim();
+    const phone = onlyNumbers(visitorForm.phone || "");
 
     if (!name) {
-      setFormError("Informe seu nome para iniciar o atendimento.");
+      setFormError("Informe o nome para iniciar o atendimento.");
       return;
     }
 
-    if (!phone || phone.length < 10) {
+    if (!phone) {
+      setFormError("Informe o telefone para iniciar o atendimento.");
+      return;
+    }
+
+    if (phone.length < 10) {
       setFormError("Informe um telefone válido com DDD.");
       return;
     }
 
-    const identifiedVisitor = {
-      name,
-      phone: ensureBrazilPhone(phone),
-      email,
-      notes,
-    };
-
-    setVisitor(identifiedVisitor);
-    setIsIdentified(true);
-    setFormError("");
-
     setMessages([
       {
-        id: cryptoRandomId(),
+        id: makeChatId(),
         role: "bot",
-        text: `Olá, ${firstName(name)}! Atendimento iniciado. Como posso ajudar?`,
+        text: `Olá, ${name}! Eu sou o ${
+          clientProfile.assistantName || "Assistente IA"
+        }. Como posso ajudar?`,
         createdAt: new Date().toISOString(),
       },
     ]);
 
-    setTimeout(() => inputRef.current?.focus(), 100);
+    setHasStartedChat(true);
   }
 
-  function resetIdentification() {
-    setIsIdentified(false);
-    setVisitor({ name: "", phone: "", email: "", notes: "" });
-    setVisitorForm({ name: "", phone: "", email: "", notes: "" });
+  function handleResetVisitor() {
+    setHasStartedChat(false);
+    setMessages([]);
     setInputText("");
     setFormError("");
-    setMessages([
-      {
-        id: cryptoRandomId(),
-        role: "bot",
-        text: "Olá! Para iniciar o atendimento, informe seu nome e telefone.",
-        createdAt: new Date().toISOString(),
-      },
-    ]);
-    setTimeout(() => nameRef.current?.focus(), 100);
+
+    setVisitorForm((current) => ({
+      ...current,
+      name: "",
+      phone: "",
+      email: "",
+      notes: "",
+    }));
   }
 
-  function addBotMessage(text: string) {
+  function addBotMessage(text) {
     setMessages((current) => [
       ...current,
       {
-        id: cryptoRandomId(),
+        id: makeChatId(),
         role: "bot",
         text,
         createdAt: new Date().toISOString(),
@@ -211,14 +184,15 @@ export default function ClientChatWidget({
     ]);
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
     const message = inputText.trim();
+
     if (!message || isSending) return;
 
-    if (!isIdentified) {
-      addBotMessage("Antes de continuar, informe seu nome e telefone.");
+    if (!hasStartedChat) {
+      setFormError("Preencha seus dados antes de iniciar a conversa.");
       return;
     }
 
@@ -229,71 +203,63 @@ export default function ClientChatWidget({
       return;
     }
 
-    const userMessage: ChatMessage = {
-      id: cryptoRandomId(),
-      role: "user",
-      text: message,
-      createdAt: new Date().toISOString(),
-    };
+    setMessages((current) => [
+      ...current,
+      {
+        id: makeChatId(),
+        role: "user",
+        text: message,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
 
-    setMessages((current) => [...current, userMessage]);
     setInputText("");
     setIsSending(true);
 
     try {
-      const remoteJid = `${visitor.phone}@s.whatsapp.net`;
-      const fakeMessageId = `widget-${Date.now()}`;
-      const nowIso = new Date().toISOString();
-      const nowTimestamp = Math.floor(Date.now() / 1000);
-
       const payload = {
         _testMode: true,
         _channel: "web-widget-test",
         _source: "client-web-widget",
 
-        channel: "web-widget-test",
+        channel: normalizedProfile.channel,
         source: "client-web-widget",
+
         clientId: normalizedProfile.clientId,
         clientName: normalizedProfile.clientName,
         tenantId: normalizedProfile.tenantId,
         segment: normalizedProfile.segment,
 
-        instance: normalizedProfile.instanceName,
         instanceName: normalizedProfile.instanceName,
         evolutionInstance: normalizedProfile.evolutionInstance,
+        instance: normalizedProfile.instanceName,
 
-        display_phone_number: normalizedProfile.displayPhoneNumber,
-        displayPhoneNumber: normalizedProfile.displayPhoneNumber,
-        businessPhone: normalizedProfile.displayPhoneNumber,
-        business_phone: normalizedProfile.displayPhoneNumber,
-        recipientPhone: normalizedProfile.displayPhoneNumber,
-        recipient_phone: normalizedProfile.displayPhoneNumber,
-        phoneNumber: normalizedProfile.displayPhoneNumber,
-        phone_number: normalizedProfile.displayPhoneNumber,
-        sender: normalizedProfile.displayPhoneNumber,
-        remetente: normalizedProfile.displayPhoneNumber,
+        name: normalizedProfile.userName,
+        nome: normalizedProfile.userName,
+        customerName: normalizedProfile.userName,
+        pushName: normalizedProfile.userName,
 
-        name: visitor.name,
-        nome: visitor.name,
-        customerName: visitor.name,
-        pushName: visitor.name,
+        phone: normalizedProfile.userPhone,
+        number: normalizedProfile.userPhone,
+        from: normalizedProfile.userPhone,
+        customerPhone: normalizedProfile.userPhone,
 
-        phone: visitor.phone,
-        number: visitor.phone,
-        from: visitor.phone,
-        customerPhone: visitor.phone,
-        contato: remoteJid,
-        remoteJid,
-        remoteJidAlt: remoteJid,
+        email: normalizedProfile.userEmail,
+        customerEmail: normalizedProfile.userEmail,
 
-        email: visitor.email,
-        testScenario: normalizedProfile.segment,
-        testNotes: visitor.notes,
+        remoteJid: `${normalizedProfile.userPhone}@web-widget.local`,
+        remoteJidAlt: `${normalizedProfile.userPhone}@web-widget.local`,
+        contato: `${normalizedProfile.userPhone}@web-widget.local`,
 
         message,
         text: message,
         mensagem: message,
         conversation: message,
+
+        testScenario: normalizedProfile.testScenario,
+        scenario: normalizedProfile.testScenario,
+        testNotes: normalizedProfile.testNotes,
+        observacoesTeste: normalizedProfile.testNotes,
 
         messageType: "conversation",
         fromMe: false,
@@ -301,80 +267,44 @@ export default function ClientChatWidget({
         isGroup: false,
         isStatus: false,
         isBroadcast: false,
-        isAudio: false,
-        hasBinaryAudio: false,
-        binaryFieldName: "",
-        isValidMessage: true,
-        timestamp: nowIso,
+        timestamp: new Date().toISOString(),
+
+        event: {
+          event: "messages.upsert",
+          instance: normalizedProfile.instanceName,
+          server_url: "web-widget-test",
+          apikey: "web-widget-test",
+          Info: {
+            Type: "conversation",
+            PushName: normalizedProfile.userName,
+            Sender: `${normalizedProfile.userPhone}@web-widget.local`,
+            Chat: `${normalizedProfile.userPhone}@web-widget.local`,
+            FromMe: false,
+          },
+          Message: {
+            conversation: message,
+          },
+        },
 
         visitor: {
-          name: visitor.name,
-          phone: visitor.phone,
-          email: visitor.email,
-          scenario: normalizedProfile.segment,
-          notes: visitor.notes,
+          name: normalizedProfile.userName,
+          phone: normalizedProfile.userPhone,
+          email: normalizedProfile.userEmail,
+          scenario: normalizedProfile.testScenario,
+          notes: normalizedProfile.testNotes,
         },
 
         profile: {
           ...normalizedProfile,
-          userName: visitor.name,
-          userPhone: visitor.phone,
-          userEmail: visitor.email,
-          userNotes: visitor.notes,
-        },
-
-        event: "messages.upsert",
-
-        data: {
-          key: {
-            remoteJid,
-            remoteJidAlt: remoteJid,
-            fromMe: false,
-            id: fakeMessageId,
-            addressingMode: "web-widget",
-          },
-          pushName: visitor.name,
-          message: {
-            conversation: message,
-          },
-          messageType: "conversation",
-          messageTimestamp: nowTimestamp,
-          date_time: nowIso,
-          instanceId: normalizedProfile.clientId,
-          server_url: "web-widget-test",
-          source: "client-web-widget",
-
-          display_phone_number: normalizedProfile.displayPhoneNumber,
-          displayPhoneNumber: normalizedProfile.displayPhoneNumber,
-          businessPhone: normalizedProfile.displayPhoneNumber,
-          business_phone: normalizedProfile.displayPhoneNumber,
-          recipientPhone: normalizedProfile.displayPhoneNumber,
-          recipient_phone: normalizedProfile.displayPhoneNumber,
-          phoneNumber: normalizedProfile.displayPhoneNumber,
-          phone_number: normalizedProfile.displayPhoneNumber,
-          sender: normalizedProfile.displayPhoneNumber,
-          remetente: normalizedProfile.displayPhoneNumber,
-
-          email: visitor.email,
-          testScenario: normalizedProfile.segment,
-          testNotes: visitor.notes,
-          visitor: {
-            name: visitor.name,
-            phone: visitor.phone,
-            email: visitor.email,
-            scenario: normalizedProfile.segment,
-            notes: visitor.notes,
-          },
+          name: normalizedProfile.userName,
+          phone: normalizedProfile.userPhone,
+          email: normalizedProfile.userEmail,
         },
       };
 
       console.log("[ClientChatWidget] Enviando mensagem para backend:", {
         finalBackendUrl,
-        clientId: normalizedProfile.clientId,
-        clientName: normalizedProfile.clientName,
-        name: visitor.name,
-        phone: visitor.phone,
-        message,
+        payload,
       });
 
       const response = await fetch(finalBackendUrl, {
@@ -409,12 +339,18 @@ export default function ClientChatWidget({
         data?.text ||
         data?.output ||
         data?.resposta ||
-        data?.responseText ||
-        "Recebi sua mensagem, mas o backend não retornou um campo de resposta reconhecido.";
+        data?.resposta_ai ||
+        data?.n8n?.reply ||
+        data?.n8n?.response ||
+        data?.n8n?.message ||
+        data?.n8n?.resposta ||
+        data?.n8n?.resposta_ai ||
+        "Recebi sua mensagem, mas o backend não retornou o campo reply.";
 
       addBotMessage(String(reply));
     } catch (error) {
       console.error("[ClientChatWidget] Erro ao enviar mensagem:", error);
+
       addBotMessage(
         "Não consegui conectar ao backend do chat. Verifique se a API está publicada e se o CORS está liberado."
       );
@@ -446,29 +382,31 @@ export default function ClientChatWidget({
           </header>
 
           <div className="client-chat-profile">
-            <span>{isIdentified ? "Contato ativo:" : "Identificação necessária"}</span>
-            <strong>
-              {isIdentified ? `${firstName(visitor.name)} • ${formatPhone(visitor.phone)}` : normalizedProfile.segment}
-            </strong>
+            <span>Perfil ativo:</span>
+            <strong>{normalizedProfile.segment}</strong>
           </div>
 
-          {!isIdentified ? (
-            <form className="client-chat-identification" onSubmit={handleIdentificationSubmit}>
-              <div className="client-chat-identification-intro">
-                <strong>Antes de começar</strong>
-                <span>Informe seus dados para a IA manter o contexto do atendimento.</span>
-              </div>
+          {!hasStartedChat ? (
+            <form className="client-chat-start-form" onSubmit={handleStartChat}>
+              <div className="client-chat-start-title">Antes de começar</div>
 
-              {formError && <div className="client-chat-form-error">{formError}</div>}
+              <p className="client-chat-start-description">
+                Informe seus dados para que a IA consiga manter o contexto do
+                atendimento.
+              </p>
+
+              {formError && (
+                <div className="client-chat-form-error">{formError}</div>
+              )}
 
               <label className="client-chat-field">
                 <span>Nome *</span>
                 <input
-                  ref={nameRef}
                   value={visitorForm.name}
-                  onChange={(event) => updateVisitorForm("name", event.target.value)}
-                  placeholder="Seu nome"
-                  autoComplete="name"
+                  onChange={(event) =>
+                    updateVisitorField("name", event.target.value)
+                  }
+                  placeholder="Ex.: Douglas Mello"
                 />
               </label>
 
@@ -476,10 +414,11 @@ export default function ClientChatWidget({
                 <span>Telefone com DDD *</span>
                 <input
                   value={visitorForm.phone}
-                  onChange={(event) => updateVisitorForm("phone", event.target.value)}
-                  placeholder="(51) 99999-9999"
-                  autoComplete="tel"
-                  inputMode="tel"
+                  onChange={(event) =>
+                    updateVisitorField("phone", event.target.value)
+                  }
+                  placeholder="Ex.: 51999999999"
+                  inputMode="numeric"
                 />
               </label>
 
@@ -487,40 +426,74 @@ export default function ClientChatWidget({
                 <span>E-mail</span>
                 <input
                   value={visitorForm.email}
-                  onChange={(event) => updateVisitorForm("email", event.target.value)}
-                  placeholder="seuemail@exemplo.com"
-                  autoComplete="email"
-                  inputMode="email"
+                  onChange={(event) =>
+                    updateVisitorField("email", event.target.value)
+                  }
+                  placeholder="Ex.: cliente@email.com"
+                  type="email"
                 />
               </label>
 
               <label className="client-chat-field">
                 <span>O que você procura?</span>
+                <select
+                  value={visitorForm.scenario}
+                  onChange={(event) =>
+                    updateVisitorField("scenario", event.target.value)
+                  }
+                >
+                  <option value="Agenda - Eventos">Agenda - Eventos</option>
+                  <option value="Orçamento">Orçamento</option>
+                  <option value="Dúvidas sobre serviços">
+                    Dúvidas sobre serviços
+                  </option>
+                  <option value="Contrato">Contrato</option>
+                  <option value="Suporte">Suporte</option>
+                  <option value="Financeiro">Financeiro</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </label>
+
+              <label className="client-chat-field">
+                <span>Observações</span>
                 <textarea
                   value={visitorForm.notes}
-                  onChange={(event) => updateVisitorForm("notes", event.target.value)}
-                  placeholder="Ex.: orçamento para festa de 15 anos, casamento, evento corporativo..."
+                  onChange={(event) =>
+                    updateVisitorField("notes", event.target.value)
+                  }
+                  placeholder="Ex.: Quero orçamento para uma festa de 15 anos com 60 pessoas."
                   rows={3}
                 />
               </label>
 
               <button type="submit" className="client-chat-start-button">
-                Iniciar atendimento
+                Iniciar conversa
               </button>
             </form>
           ) : (
             <>
+              <div className="client-chat-visitor-bar">
+                <div>
+                  <strong>{normalizedProfile.userName}</strong>
+                  <span>{formatPhone(normalizedProfile.userPhone)}</span>
+                </div>
+
+                <button type="button" onClick={handleResetVisitor}>
+                  Trocar dados
+                </button>
+              </div>
+
               <main className="client-chat-messages">
-                {messages.map((message) => (
+                {messages.map((messageItem) => (
                   <div
-                    key={message.id}
+                    key={messageItem.id}
                     className={
-                      message.role === "user"
+                      messageItem.role === "user"
                         ? "client-chat-message client-chat-message-user"
                         : "client-chat-message client-chat-message-bot"
                     }
                   >
-                    {message.text}
+                    {messageItem.text}
                   </div>
                 ))}
 
@@ -531,16 +504,8 @@ export default function ClientChatWidget({
                 )}
               </main>
 
-              <div className="client-chat-context-bar">
-                <span>{visitor.name}</span>
-                <button type="button" onClick={resetIdentification} disabled={isSending}>
-                  Trocar contato
-                </button>
-              </div>
-
               <form className="client-chat-form" onSubmit={handleSubmit}>
                 <input
-                  ref={inputRef}
                   value={inputText}
                   onChange={(event) => setInputText(event.target.value)}
                   placeholder="Digite sua mensagem..."
@@ -562,28 +527,60 @@ export default function ClientChatWidget({
         onClick={toggleChat}
         aria-label={isOpen ? "Fechar chat" : "Abrir chat"}
       >
-        {isOpen ? "×" : <ChatIcon />}
+        {isOpen ? "×" : <BotIcon />}
       </button>
     </div>
   );
 }
 
-function ChatIcon() {
+function BotIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M4 5.8C4 4.80589 4.80589 4 5.8 4H18.2C19.1941 4 20 4.80589 20 5.8V14.2C20 15.1941 19.1941 16 18.2 16H9.5L5.8 19.2C5.14579 19.7655 4.125 19.3006 4.125 18.4358V16.0156C4.05347 16.0054 4 15.944 4 15.8717V5.8Z"
+    <svg
+      width="26"
+      height="26"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <rect
+        x="3"
+        y="11"
+        width="18"
+        height="10"
+        rx="2"
         stroke="currentColor"
         strokeWidth="1.8"
-        strokeLinejoin="round"
       />
-      <path d="M8 9H16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M8 12H13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle
+        cx="12"
+        cy="5"
+        r="2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M12 7v4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M8 16h.01"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M16 16h.01"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
-async function safeReadJson(response: Response) {
+async function safeReadJson(response) {
   try {
     return await response.json();
   } catch {
@@ -591,37 +588,37 @@ async function safeReadJson(response: Response) {
   }
 }
 
-function onlyNumbers(value: unknown) {
+function onlyNumbers(value) {
   return String(value || "").replace(/\D/g, "");
 }
 
-function ensureBrazilPhone(value: string) {
-  const digits = onlyNumbers(value);
-  if (!digits) return "";
-  if (digits.startsWith("55")) return digits;
-  return `55${digits}`;
-}
+function formatPhone(value) {
+  const only = onlyNumbers(value);
 
-function formatPhone(value: string) {
-  const digits = onlyNumbers(value);
-  const local = digits.startsWith("55") ? digits.slice(2) : digits;
+  if (!only) return "Sem telefone";
 
-  if (local.length === 11) {
-    return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+  if (only.length === 13) {
+    return `+${only.slice(0, 2)} (${only.slice(2, 4)}) ${only.slice(
+      4,
+      9
+    )}-${only.slice(9)}`;
   }
 
-  if (local.length === 10) {
-    return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+  if (only.length === 11) {
+    return `(${only.slice(0, 2)}) ${only.slice(2, 7)}-${only.slice(7)}`;
   }
 
-  return value;
+  if (only.length === 10) {
+    return `(${only.slice(0, 2)}) ${only.slice(2, 6)}-${only.slice(6)}`;
+  }
+
+  return only;
 }
 
-function firstName(value: string) {
-  return String(value || "").trim().split(/\s+/)[0] || "tudo bem";
-}
+function makeChatId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
 
-function cryptoRandomId() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
