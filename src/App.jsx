@@ -2471,8 +2471,6 @@ export default function App() {
           evolutionInstance: "agentechatbot",
           segment: "Agenda - Eventos",
           assistantName: `Assistente ${company?.name || "Danona Gourmet"}`,
-          userName: user?.name || "Visitante Teste",
-          userPhone: user?.phone || "5599999999999",
         }}
       />
     </>
