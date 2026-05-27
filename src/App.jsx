@@ -1305,7 +1305,7 @@ function ClientChatWidget({
               <div className="client-chat-visitor-bar">
                 <div>
                   <strong>{normalizedProfile.userName}</strong>
-                  <span>{formatPhone(normalizedProfile.userPhone)}</span>
+                  <span>{normalizedProfile.userPhone || "Sem telefone"}</span>
                 </div>
 
                 <button type="button" onClick={handleResetVisitor}>
