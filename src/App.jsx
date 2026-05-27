@@ -2663,6 +2663,9 @@ export default function App() {
         </div>
       </div>
 
+      const chatBackendUrl =
+      "https://mbtech-back-back.yph90z.easypanel.host/api/chat-widget";
+
       <ClientChatWidget
         backendUrl={chatBackendUrl}
         clientProfile={{

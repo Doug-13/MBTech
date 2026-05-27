@@ -2,31 +2,14 @@ import React, { useMemo, useState } from "react";
 import "./ClientChatWidget.css";
 
 /**
- * Widget flutuante para atendimento IA via backend.
+ * Widget flutuante para atendimento IA via backend MB Tech.
  *
  * Fluxo:
  * 1. Usuário abre o chat.
- * 2. Antes de conversar, informa nome, telefone, e-mail e contexto.
- * 3. O componente envia as mensagens para o backend:
- *    https://mbtech-back-back.yph90z.easypanel.host/api/chat-widget
+ * 2. Antes de conversar, informa nome e telefone.
+ * 3. O componente envia mensagens para o backend /api/chat-widget.
  * 4. O backend chama o webhook do n8n.
- *
- * Exemplo de uso:
- *
- * <ClientChatWidget
- *   backendUrl="https://mbtech-back-back.yph90z.easypanel.host/api/chat-widget"
- *   clientProfile={{
- *     clientId: company?.id || "a95ec1d1-f8a8-4f50-8956-46ae42388422",
- *     clientName: company?.name || "Danona Gourmet",
- *     tenantId: company?.id || "a95ec1d1-f8a8-4f50-8956-46ae42388422",
- *     instanceName: "agentechatbot",
- *     evolutionInstance: "agentechatbot",
- *     segment: "Agenda - Eventos",
- *     assistantName: `Assistente ${company?.name || "Danona Gourmet"}`,
- *   }}
- * />
  */
-
 export default function ClientChatWidget({
   backendUrl,
   clientProfile = {},
