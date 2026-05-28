@@ -1776,19 +1776,19 @@ function normalizeDialogueMessages(conversation, messagesFromApi = []) {
   return [
     lastMessage
       ? {
-          id: `${conversation?.id || "conversation"}-last-message`,
-          role: "user",
-          text: lastMessage,
-          createdAt: conversation?.last_message_at || conversation?.created_at || "",
-        }
+        id: `${conversation?.id || "conversation"}-last-message`,
+        role: "user",
+        text: lastMessage,
+        createdAt: conversation?.last_message_at || conversation?.created_at || "",
+      }
       : null,
     aiSummary
       ? {
-          id: `${conversation?.id || "conversation"}-ai-summary`,
-          role: "bot",
-          text: aiSummary,
-          createdAt: conversation?.updated_at || conversation?.last_message_at || "",
-        }
+        id: `${conversation?.id || "conversation"}-ai-summary`,
+        role: "bot",
+        text: aiSummary,
+        createdAt: conversation?.updated_at || conversation?.last_message_at || "",
+      }
       : null,
   ].filter(Boolean);
 }
@@ -3213,9 +3213,6 @@ export default function App() {
           {tab === "parametros" && <AiParams company={company} />}
         </div>
       </div>
-
-      const chatBackendUrl =
-      "https://mbtech-back-back.yph90z.easypanel.host/api/chat-widget";
 
       <ClientChatWidget
         backendUrl={chatBackendUrl}
