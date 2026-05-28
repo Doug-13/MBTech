@@ -259,7 +259,7 @@ export const api = {
       conversationId,
     });
 
-    return request(`/conversations/${conversationId}/messages`);
+    return request(`/conversation-messages${qs({ conversationId })}`);
   },
 
   getAiParameters() {
