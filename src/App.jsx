@@ -1689,21 +1689,572 @@ function EventsCalendar({ events, setEv }) {
   return <div className="card p20"><div className="wk-grid">{getWeekDays().map((day, i) => { const de = events.filter((e) => e.event_date === day); return <div key={day} className={`wk-day ${day === TODAY ? "today" : ""}`} style={{ minHeight: 140, animationDelay: `${i * 0.04}s` }}><div className="wk-day-name">{WEEK_PT[i]}</div><div className="wk-day-num">{day.slice(8)}/{day.slice(5, 7)}</div>{de.map((ev) => <button key={ev.id} className={`ev-chip ${ev.status === "confirmado" ? "ch-ok" : "ch-pnd"}`} onClick={() => setEv(ev)}>{ev.event_time && `${ev.event_time} · `}{ev.event_type}<br /><span style={{ fontWeight: 400 }}>{ev.customer_name}</span></button>)}{de.length === 0 && <div className="tx-meta" style={{ marginTop: 7 }}>Sem eventos</div>}</div>; })}</div></div>;
 }
 
-function ConversationItem({ c, i }) {
-  return <div className="ch-item" style={{ animationDelay: `${i * 0.05}s` }}><div className="ch-av">{initials(c.customer_name)}</div><div style={{ flex: 1, minWidth: 0 }}><div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}><span className="ch-name">{c.customer_name}</span><Bdg status={c.status} />{c.human_review_required && <div className="rev-dot" />}</div><div className="ch-msg">{c.last_message}</div>{c.ai_summary && <div className="ch-ai">🤖 {c.ai_summary}</div>}<div className="tx-meta" style={{ marginTop: 3 }}>📱 {c.customer_phone || c.customer_username || "—"}</div></div><div className="ch-time">{String(c.created_at || c.last_message_at || "").slice(11, 16)}</div></div>;
+
+function getMessageText(message) {
+  return (
+    message?.message ||
+    message?.text ||
+    message?.content ||
+    message?.body ||
+    message?.mensagem ||
+    message?.response ||
+    message?.reply ||
+    ""
+  );
+}
+
+function getMessageRole(message) {
+  const rawRole = String(
+    message?.role ||
+    message?.sender_type ||
+    message?.senderType ||
+    message?.direction ||
+    message?.type ||
+    ""
+  ).toLowerCase();
+
+  const fromMe =
+    message?.from_me === true ||
+    message?.fromMe === true ||
+    message?.is_from_me === true ||
+    message?.isFromMe === true;
+
+  if (
+    fromMe ||
+    rawRole.includes("assistant") ||
+    rawRole.includes("bot") ||
+    rawRole.includes("ai") ||
+    rawRole.includes("out") ||
+    rawRole.includes("sent")
+  ) {
+    return "bot";
+  }
+
+  return "user";
+}
+
+function getMessageDate(message) {
+  return (
+    message?.created_at ||
+    message?.createdAt ||
+    message?.message_timestamp ||
+    message?.messageTimestamp ||
+    message?.timestamp ||
+    ""
+  );
+}
+
+function normalizeDialogueMessages(conversation, messagesFromApi = []) {
+  const source =
+    Array.isArray(messagesFromApi) && messagesFromApi.length > 0
+      ? messagesFromApi
+      : Array.isArray(conversation?.messages)
+        ? conversation.messages
+        : Array.isArray(conversation?.dialogue)
+          ? conversation.dialogue
+          : Array.isArray(conversation?.dialog)
+            ? conversation.dialog
+            : [];
+
+  const normalized = source
+    .map((message, index) => ({
+      id: message?.id || message?.message_id || `${conversation?.id || "msg"}-${index}`,
+      role: getMessageRole(message),
+      text: String(getMessageText(message) || "").trim(),
+      createdAt: getMessageDate(message),
+      raw: message,
+    }))
+    .filter((message) => message.text);
+
+  if (normalized.length > 0) {
+    return normalized;
+  }
+
+  const lastMessage = String(conversation?.last_message || "").trim();
+  const aiSummary = String(conversation?.ai_summary || "").trim();
+
+  return [
+    lastMessage
+      ? {
+          id: `${conversation?.id || "conversation"}-last-message`,
+          role: "user",
+          text: lastMessage,
+          createdAt: conversation?.last_message_at || conversation?.created_at || "",
+        }
+      : null,
+    aiSummary
+      ? {
+          id: `${conversation?.id || "conversation"}-ai-summary`,
+          role: "bot",
+          text: aiSummary,
+          createdAt: conversation?.updated_at || conversation?.last_message_at || "",
+        }
+      : null,
+  ].filter(Boolean);
+}
+
+function ConversationDetailModal({
+  conversation,
+  messages,
+  loading,
+  error,
+  onClose,
+}) {
+  if (!conversation) return null;
+
+  const title =
+    conversation.customer_name ||
+    conversation.customerName ||
+    conversation.name ||
+    "Conversa";
+
+  const phone =
+    conversation.customer_phone ||
+    conversation.customerPhone ||
+    conversation.customer_username ||
+    conversation.phone ||
+    "—";
+
+  return (
+    <div className="m-bg" onClick={(event) => event.target === event.currentTarget && onClose()}>
+      <section className="modal" style={{ maxWidth: 760 }}>
+        <div className="m-head">
+          <div>
+            <div className="m-title">{title}</div>
+            <div className="m-sub">
+              📱 {phone} · {messages.length} mensagem(ns)
+            </div>
+          </div>
+
+          <button type="button" className="btn btn-outline btn-sm" onClick={onClose}>
+            {Ic.x}
+          </button>
+        </div>
+
+        <div className="m-body">
+          {conversation.human_review_required && (
+            <div className="l-err" style={{ marginBottom: 14 }}>
+              Esta conversa está marcada para revisão humana.
+            </div>
+          )}
+
+          {conversation.ai_summary && (
+            <div className="ch-ai" style={{ marginBottom: 14 }}>
+              🤖 Resumo da IA: {conversation.ai_summary}
+            </div>
+          )}
+
+          {error && <div className="l-err">{error}</div>}
+
+          {loading ? (
+            <div className="empty">
+              <div className="empty-ico">💬</div>
+              <div className="empty-txt">Carregando diálogo...</div>
+            </div>
+          ) : messages.length === 0 ? (
+            <div className="empty">
+              <div className="empty-ico">💬</div>
+              <div className="empty-txt">Nenhuma mensagem encontrada para esta conversa.</div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {messages.map((message) => {
+                const isBot = message.role === "bot";
+
+                return (
+                  <div
+                    key={message.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: isBot ? "flex-end" : "flex-start",
+                    }}
+                  >
+                    <div
+                      className={
+                        isBot
+                          ? "client-chat-message client-chat-message-user"
+                          : "client-chat-message client-chat-message-bot"
+                      }
+                      style={{
+                        marginBottom: 0,
+                        maxWidth: "78%",
+                        boxShadow: "var(--sh0)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 800,
+                          opacity: 0.65,
+                          marginBottom: 4,
+                          textTransform: "uppercase",
+                          letterSpacing: ".06em",
+                        }}
+                      >
+                        {isBot ? "IA / Atendente" : title}
+                      </div>
+
+                      <div>{message.text}</div>
+
+                      {message.createdAt && (
+                        <div
+                          style={{
+                            fontSize: 10,
+                            opacity: 0.62,
+                            marginTop: 6,
+                            textAlign: "right",
+                          }}
+                        >
+                          {String(message.createdAt).slice(0, 16).replace("T", " ")}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="m-foot">
+          <button type="button" className="btn btn-outline" onClick={onClose}>
+            Fechar
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ConversationItem({ c, i, onOpen }) {
+  return (
+    <button
+      type="button"
+      className="ch-item"
+      style={{
+        animationDelay: `${i * 0.05}s`,
+        width: "100%",
+        textAlign: "left",
+        cursor: "pointer",
+        background: "transparent",
+      }}
+      onClick={() => onOpen?.(c)}
+      title="Clique para ver todo o diálogo"
+    >
+      <div className="ch-av">{initials(c.customer_name)}</div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+          <span className="ch-name">{c.customer_name || "Cliente sem nome"}</span>
+          <Bdg status={c.status} />
+          {c.human_review_required && <div className="rev-dot" />}
+        </div>
+
+        <div className="ch-msg">{c.last_message}</div>
+
+        {c.ai_summary && <div className="ch-ai">🤖 {c.ai_summary}</div>}
+
+        <div className="tx-meta" style={{ marginTop: 3 }}>
+          📱 {c.customer_phone || c.customer_username || "—"}
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+        <div className="ch-time">
+          {String(c.created_at || c.last_message_at || "").slice(11, 16)}
+        </div>
+
+        <span className="tx-meta" style={{ fontSize: 11 }}>
+          Ver diálogo
+        </span>
+      </div>
+    </button>
+  );
 }
 
 function WhatsApp({ dashboard }) {
   const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [selectedMessages, setSelectedMessages] = useState([]);
+  const [dialogueLoading, setDialogueLoading] = useState(false);
+  const [dialogueError, setDialogueError] = useState("");
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  const stats = dashboard?.stats || { total_chats: 0, new_leads: 0, contracts_requested: 0, pending_human_review: 0, conversion_rate: 0, avg_response_time_seconds: 0, weekly: [0, 0, 0, 0, 0, 0, 0] };
+
+  const stats = dashboard?.stats || {
+    total_chats: 0,
+    new_leads: 0,
+    contracts_requested: 0,
+    pending_human_review: 0,
+    conversion_rate: 0,
+    avg_response_time_seconds: 0,
+    weekly: [0, 0, 0, 0, 0, 0, 0],
+  };
+
   const maxBar = Math.max(1, ...(stats.weekly || []));
-  async function load() { setLoading(true); setErr(""); try { const data = await api.getConversations({ q }); setConversations(data.conversations || []); } catch (error) { setErr(getErrorMessage(error)); } finally { setLoading(false); } }
-  useEffect(() => { load(); }, []);
-  const metrics = [{ l: "Conversas", v: stats.total_chats, e: "💬" }, { l: "Novos leads", v: stats.new_leads, e: "🎯" }, { l: "Contratos", v: stats.contracts_requested, e: "📋" }, { l: "Revisão humana", v: stats.pending_human_review, e: "⚠️" }];
-  return <div className="page"><div style={{ marginBottom: 22, animation: "fadeUp .4s ease both" }}><div className="tx-title">Atendimentos WhatsApp</div><div className="tx-meta" style={{ marginTop: 3 }}>Hoje, {fmtDateFull(TODAY)}</div></div><div className="metric-grid" style={{ marginBottom: 20 }}>{metrics.map((m, i) => <div className="metric-card" key={m.l} style={{ animationDelay: `${i * 0.07}s` }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}><div><div className="tx-label" style={{ marginBottom: 8 }}>{m.l}</div><div className="tx-num">{m.v}</div></div><span style={{ fontSize: 24 }}>{m.e}</span></div></div>)}</div><div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16 }}><div className="card p20"><div className="tx-section" style={{ marginBottom: 2 }}>Volume semanal</div><div className="tx-meta" style={{ marginBottom: 18 }}>WhatsApp · 7 dias</div><div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 86 }}>{(stats.weekly || []).map((v, i) => <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}><span style={{ fontSize: 9, fontWeight: 600, color: "var(--n400)" }}>{v}</span><div className="bar" style={{ width: "100%", height: `${(Number(v) / maxBar) * 70}px`, opacity: i === 6 ? 1 : 0.45, animationDelay: `${i * 0.06}s` }} /><span style={{ fontSize: 9, fontWeight: 600, color: "var(--n400)" }}>{WEEK_PT[i]}</span></div>)}</div><div className="divider" /><div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>{[{ l: "Conversão", v: `${stats.conversion_rate}%`, bg: "var(--g50)", c: "#065f46" }, { l: "Resp. média", v: `${stats.avg_response_time_seconds || 0}s`, bg: "var(--b50)", c: "#1e40af" }].map((r) => <div key={r.l} style={{ padding: "11px", background: r.bg, borderRadius: "var(--r8)" }}><div style={{ fontSize: 10, fontWeight: 700, color: r.c, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 3 }}>{r.l}</div><div style={{ fontSize: 20, fontWeight: 800, color: r.c, letterSpacing: "-0.04em" }}>{r.v}</div></div>)}</div></div><div className="card p20"><div className="sec-h"><div><div className="tx-section">Conversas recentes</div><div className="tx-meta" style={{ marginTop: 2 }}>Atendimentos salvos no banco</div></div><div style={{ display: "flex", gap: 8 }}><div className="s-wrap">{Ic.srch}<input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && load()} placeholder="Buscar..." /></div><button className="btn btn-outline" onClick={load}>Buscar</button></div></div>{err && <div className="l-err">{err}</div>}{loading && <div className="tx-meta">Carregando conversas...</div>}{conversations.length === 0 ? <div className="empty"><div className="empty-ico">💬</div><div className="empty-txt">Nenhuma conversa</div></div> : conversations.map((c, i) => <ConversationItem key={c.id} c={c} i={i} />)}</div></div></div>;
+
+  async function load() {
+    setLoading(true);
+    setErr("");
+
+    try {
+      const data = await api.getConversations({ q });
+      setConversations(data.conversations || []);
+    } catch (error) {
+      setErr(getErrorMessage(error));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function openConversation(conversation) {
+    setSelectedConversation(conversation);
+    setSelectedMessages(normalizeDialogueMessages(conversation));
+    setDialogueError("");
+
+    if (!conversation?.id) {
+      return;
+    }
+
+    const canLoadFullDialogue =
+      typeof api.getConversationMessages === "function" ||
+      typeof api.getConversationDialogue === "function";
+
+    if (!canLoadFullDialogue) {
+      setDialogueError(
+        "A lista foi aberta com os dados já carregados. Para buscar todo o histórico do banco, adicione o método api.getConversationMessages no services/api.js."
+      );
+      return;
+    }
+
+    setDialogueLoading(true);
+
+    try {
+      const data =
+        typeof api.getConversationMessages === "function"
+          ? await api.getConversationMessages(conversation.id)
+          : await api.getConversationDialogue(conversation.id);
+
+      const messages =
+        data?.messages ||
+        data?.dialogue ||
+        data?.dialog ||
+        data?.conversation?.messages ||
+        [];
+
+      setSelectedMessages(normalizeDialogueMessages(conversation, messages));
+    } catch (error) {
+      setDialogueError(getErrorMessage(error));
+      setSelectedMessages(normalizeDialogueMessages(conversation));
+    } finally {
+      setDialogueLoading(false);
+    }
+  }
+
+  function closeConversation() {
+    setSelectedConversation(null);
+    setSelectedMessages([]);
+    setDialogueError("");
+    setDialogueLoading(false);
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const metrics = [
+    { l: "Conversas", v: stats.total_chats, e: "💬" },
+    { l: "Novos leads", v: stats.new_leads, e: "🎯" },
+    { l: "Contratos", v: stats.contracts_requested, e: "📋" },
+    { l: "Revisão humana", v: stats.pending_human_review, e: "⚠️" },
+  ];
+
+  return (
+    <div className="page">
+      {selectedConversation && (
+        <ConversationDetailModal
+          conversation={selectedConversation}
+          messages={selectedMessages}
+          loading={dialogueLoading}
+          error={dialogueError}
+          onClose={closeConversation}
+        />
+      )}
+
+      <div style={{ marginBottom: 22, animation: "fadeUp .4s ease both" }}>
+        <div className="tx-title">Atendimentos WhatsApp</div>
+        <div className="tx-meta" style={{ marginTop: 3 }}>
+          Hoje, {fmtDateFull(TODAY)}
+        </div>
+      </div>
+
+      <div className="metric-grid" style={{ marginBottom: 20 }}>
+        {metrics.map((metric, index) => (
+          <div
+            className="metric-card"
+            key={metric.l}
+            style={{ animationDelay: `${index * 0.07}s` }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div className="tx-label" style={{ marginBottom: 8 }}>
+                  {metric.l}
+                </div>
+                <div className="tx-num">{metric.v}</div>
+              </div>
+
+              <span style={{ fontSize: 24 }}>{metric.e}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "260px 1fr", gap: 16 }}>
+        <div className="card p20">
+          <div className="tx-section" style={{ marginBottom: 2 }}>
+            Volume semanal
+          </div>
+
+          <div className="tx-meta" style={{ marginBottom: 18 }}>
+            WhatsApp · 7 dias
+          </div>
+
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 86 }}>
+            {(stats.weekly || []).map((value, index) => (
+              <div
+                key={index}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span style={{ fontSize: 9, fontWeight: 600, color: "var(--n400)" }}>
+                  {value}
+                </span>
+
+                <div
+                  className="bar"
+                  style={{
+                    width: "100%",
+                    height: `${(Number(value) / maxBar) * 70}px`,
+                    opacity: index === 6 ? 1 : 0.45,
+                    animationDelay: `${index * 0.06}s`,
+                  }}
+                />
+
+                <span style={{ fontSize: 9, fontWeight: 600, color: "var(--n400)" }}>
+                  {WEEK_PT[index]}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="divider" />
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
+            {[
+              {
+                l: "Conversão",
+                v: `${stats.conversion_rate}%`,
+                bg: "var(--g50)",
+                c: "#065f46",
+              },
+              {
+                l: "Resp. média",
+                v: `${stats.avg_response_time_seconds || 0}s`,
+                bg: "var(--b50)",
+                c: "#1e40af",
+              },
+            ].map((item) => (
+              <div
+                key={item.l}
+                style={{
+                  padding: "11px",
+                  background: item.bg,
+                  borderRadius: "var(--r8)",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: item.c,
+                    textTransform: "uppercase",
+                    letterSpacing: ".06em",
+                    marginBottom: 3,
+                  }}
+                >
+                  {item.l}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 800,
+                    color: item.c,
+                    letterSpacing: "-0.04em",
+                  }}
+                >
+                  {item.v}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card p20">
+          <div className="sec-h">
+            <div>
+              <div className="tx-section">Conversas recentes</div>
+              <div className="tx-meta" style={{ marginTop: 2 }}>
+                Clique em uma conversa para ver todo o diálogo
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 8 }}>
+              <div className="s-wrap">
+                {Ic.srch}
+                <input
+                  value={q}
+                  onChange={(event) => setQ(event.target.value)}
+                  onKeyDown={(event) => event.key === "Enter" && load()}
+                  placeholder="Buscar..."
+                />
+              </div>
+
+              <button className="btn btn-outline" onClick={load}>
+                Buscar
+              </button>
+            </div>
+          </div>
+
+          {err && <div className="l-err">{err}</div>}
+
+          {loading && <div className="tx-meta">Carregando conversas...</div>}
+
+          {conversations.length === 0 ? (
+            <div className="empty">
+              <div className="empty-ico">💬</div>
+              <div className="empty-txt">Nenhuma conversa</div>
+            </div>
+          ) : (
+            conversations.map((conversation, index) => (
+              <ConversationItem
+                key={conversation.id}
+                c={conversation}
+                i={index}
+                onOpen={openConversation}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const PM0 = { parameter_key: "", parameter_value: "", description: "", is_active: true };

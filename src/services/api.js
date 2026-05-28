@@ -106,7 +106,10 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    const message = data?.error || data?.message || `Erro HTTP ${response.status}`;
+    const message =
+      data?.error ||
+      data?.message ||
+      `Erro HTTP ${response.status}`;
 
     console.error("[FRONT][API] error =>", {
       url,
@@ -245,6 +248,18 @@ export const api = {
 
   getConversations(params = {}) {
     return request(`/conversations${qs(params)}`);
+  },
+
+  getConversationMessages(conversationId) {
+    if (!conversationId) {
+      throw new Error("ID da conversa não informado.");
+    }
+
+    console.log("[FRONT][API] getConversationMessages =>", {
+      conversationId,
+    });
+
+    return request(`/conversations/${conversationId}/messages`);
   },
 
   getAiParameters() {
