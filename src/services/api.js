@@ -6,6 +6,8 @@ const API_URL = (
 const CLIENT_STORAGE_KEY = "mb_tech_client_session";
 const ADMIN_STORAGE_KEY = "mb_tech_admin_session";
 
+console.log("[FRONT][API] API_URL configurada =>", API_URL);
+
 function isAdminRoute() {
   return window.location.pathname.startsWith("/admin");
 }
@@ -32,11 +34,20 @@ export function saveSession(data) {
   };
 
   localStorage.setItem(CLIENT_STORAGE_KEY, JSON.stringify(session));
+
+  console.log("[FRONT][AUTH] Sessão da empresa salva:", {
+    hasToken: Boolean(session.token),
+    userId: session.user?.id,
+    companyId: session.company?.id || session.user?.company_id,
+  });
+
   return session;
 }
 
 export function clearSession() {
   localStorage.removeItem(CLIENT_STORAGE_KEY);
+
+  console.log("[FRONT][AUTH] Sessão da empresa removida.");
 }
 
 export function getSavedAdminSession() {
@@ -52,11 +63,19 @@ export function saveAdminSession(data) {
   };
 
   localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(session));
+
+  console.log("[FRONT][AUTH] Sessão administrativa salva:", {
+    hasToken: Boolean(session.token),
+    userId: session.user?.id,
+  });
+
   return session;
 }
 
 export function clearAdminSession() {
   localStorage.removeItem(ADMIN_STORAGE_KEY);
+
+  console.log("[FRONT][AUTH] Sessão administrativa removida.");
 }
 
 function getCurrentToken() {
@@ -68,7 +87,10 @@ function getCurrentToken() {
 }
 
 async function request(path, options = {}) {
-  const token = options.token !== undefined ? options.token : getCurrentToken();
+  const token =
+    options.token !== undefined
+      ? options.token
+      : getCurrentToken();
 
   const headers = {
     "Content-Type": "application/json",
@@ -84,6 +106,8 @@ async function request(path, options = {}) {
   console.log("[FRONT][API] request =>", {
     url,
     method: options.method || "GET",
+    path,
+    isAdminRoute: isAdminRoute(),
     hasToken: Boolean(token),
   });
 
@@ -118,6 +142,12 @@ async function request(path, options = {}) {
       message,
     });
 
+    if (response.status === 401) {
+      console.warn(
+        "[FRONT][AUTH] A API retornou 401. Faça login novamente e confirme se o token da empresa está salvo."
+      );
+    }
+
     throw new Error(message);
   }
 
@@ -128,12 +158,17 @@ function qs(params = {}) {
   const search = new URLSearchParams();
 
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && String(value).trim() !== "") {
+    if (
+      value !== undefined &&
+      value !== null &&
+      String(value).trim() !== ""
+    ) {
       search.set(key, value);
     }
   });
 
   const text = search.toString();
+
   return text ? `?${text}` : "";
 }
 
@@ -145,7 +180,10 @@ export const api = {
   adminLogin(email, password) {
     return request("/admin/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        email,
+        password,
+      }),
       token: null,
     });
   },
@@ -207,7 +245,10 @@ export const api = {
   login(email, password) {
     return request("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        email,
+        password,
+      }),
       token: null,
     });
   },
@@ -259,7 +300,11 @@ export const api = {
       conversationId,
     });
 
-    return request(`/conversation-messages${qs({ conversationId })}`);
+    return request(
+      `/conversation-messages${qs({
+        conversationId,
+      })}`
+    );
   },
 
   getAiParameters() {
@@ -283,6 +328,43 @@ export const api = {
   deleteAiParameter(id) {
     return request(`/ai-parameters/${id}`, {
       method: "DELETE",
+    });
+  },
+
+  // ─────────────────────────────────────────────
+  // AGENTES DE IA
+  // ─────────────────────────────────────────────
+
+  getAgents() {
+    return request("/agents");
+  },
+
+  createAgent(data) {
+    return request("/agents", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  testAgent(data) {
+    return request("/agents/test", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // ─────────────────────────────────────────────
+  // CANAIS DE ATENDIMENTO
+  // ─────────────────────────────────────────────
+
+  getChannels() {
+    return request("/channels");
+  },
+
+  createChannel(data) {
+    return request("/channels", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   },
 };
