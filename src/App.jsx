@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, getSavedSession, saveSession, clearSession } from "./services/api";
 import AdminApp from "./AdminApp";
+import AgentsPage from "./components/AgentsPage";
 import "./components/ClientChatWidget/ClientChatWidget.css";
 
 const PLATFORM = {
@@ -1461,6 +1462,7 @@ function Sidebar({ user, company, tab, setTab, onLogout }) {
     { id: "agenda", label: "Agenda", icon: Ic.cal },
     { id: "whatsapp", label: "WhatsApp IA", icon: Ic.wa },
     { id: "parametros", label: "Parâmetros IA", icon: Ic.bot },
+    { id: "agentes", label: "Agentes de IA", icon: Ic.bot },
   ];
   return (
     <nav className="sidebar">
@@ -3152,6 +3154,7 @@ export default function App() {
     agenda: "Agenda",
     whatsapp: "WhatsApp IA",
     parametros: "Parâmetros IA",
+    agentes: "Agentes de IA",
   };
 
   return (
@@ -3211,6 +3214,8 @@ export default function App() {
           {tab === "whatsapp" && <WhatsApp dashboard={dashboard} />}
 
           {tab === "parametros" && <AiParams company={company} />}
+
+          {tab === "agentes" && <AgentsPage company={company} />}
         </div>
       </div>
 

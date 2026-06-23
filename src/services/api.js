@@ -35,19 +35,11 @@ export function saveSession(data) {
 
   localStorage.setItem(CLIENT_STORAGE_KEY, JSON.stringify(session));
 
-  console.log("[FRONT][AUTH] Sessão da empresa salva:", {
-    hasToken: Boolean(session.token),
-    userId: session.user?.id,
-    companyId: session.company?.id || session.user?.company_id,
-  });
-
   return session;
 }
 
 export function clearSession() {
   localStorage.removeItem(CLIENT_STORAGE_KEY);
-
-  console.log("[FRONT][AUTH] Sessão da empresa removida.");
 }
 
 export function getSavedAdminSession() {
@@ -64,18 +56,11 @@ export function saveAdminSession(data) {
 
   localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(session));
 
-  console.log("[FRONT][AUTH] Sessão administrativa salva:", {
-    hasToken: Boolean(session.token),
-    userId: session.user?.id,
-  });
-
   return session;
 }
 
 export function clearAdminSession() {
   localStorage.removeItem(ADMIN_STORAGE_KEY);
-
-  console.log("[FRONT][AUTH] Sessão administrativa removida.");
 }
 
 function getCurrentToken() {
@@ -114,11 +99,13 @@ async function request(path, options = {}) {
   const response = await fetch(url, {
     ...options,
     headers,
-    credentials: "include",
+    credentials: "omit",
   });
 
   if (response.status === 204) {
-    return { ok: true };
+    return {
+      ok: true,
+    };
   }
 
   let data = null;
@@ -141,12 +128,6 @@ async function request(path, options = {}) {
       data,
       message,
     });
-
-    if (response.status === 401) {
-      console.warn(
-        "[FRONT][AUTH] A API retornou 401. Faça login novamente e confirme se o token da empresa está salvo."
-      );
-    }
 
     throw new Error(message);
   }
@@ -239,7 +220,7 @@ export const api = {
   },
 
   // ─────────────────────────────────────────────
-  // CLIENTE / EMPRESA
+  // EMPRESA
   // ─────────────────────────────────────────────
 
   login(email, password) {
@@ -296,10 +277,6 @@ export const api = {
       throw new Error("ID da conversa não informado.");
     }
 
-    console.log("[FRONT][API] getConversationMessages =>", {
-      conversationId,
-    });
-
     return request(
       `/conversation-messages${qs({
         conversationId,
@@ -339,10 +316,27 @@ export const api = {
     return request("/agents");
   },
 
+  getAgent(id) {
+    return request(`/agents/${id}`);
+  },
+
   createAgent(data) {
     return request("/agents", {
       method: "POST",
       body: JSON.stringify(data),
+    });
+  },
+
+  updateAgent(id, data) {
+    return request(`/agents/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteAgent(id) {
+    return request(`/agents/${id}`, {
+      method: "DELETE",
     });
   },
 
